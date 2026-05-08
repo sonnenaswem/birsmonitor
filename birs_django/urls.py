@@ -3,6 +3,10 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import CustomTokenObtainPairView
 from performance.views import performance_summary
+from django.http import HttpResponse
+
+def home(request):
+    return HttpResponse("Hello from birs-backend!")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
