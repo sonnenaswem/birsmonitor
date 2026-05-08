@@ -9,6 +9,7 @@ def home(request):
     return HttpResponse("Hello from birs-backend!")
 
 urlpatterns = [
+    path('', home),
     path("admin/", admin.site.urls),
 
     # Auth
