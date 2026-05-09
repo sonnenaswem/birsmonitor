@@ -129,12 +129,14 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    # "https://yourfrontend.com", Paste domain when ready
+    "https://birs-frontend.onrender.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = os.getenv(
     "CSRF_TRUSTED_ORIGINS",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://birs-frontend.onrender.com",
 ).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
