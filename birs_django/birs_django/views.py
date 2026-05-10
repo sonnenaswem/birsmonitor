@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from rest_framework_simplejwt.views import TokenObtainPairView
 from users.serializers import CustomTokenObtainPairSerializer
 
@@ -17,6 +18,9 @@ from .utils.date_utils import get_current_period
 month, year = get_current_period()
 
 User = get_user_model()
+
+def health(request):
+    return HttpResponse("OK")
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

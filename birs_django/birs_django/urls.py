@@ -5,11 +5,16 @@ from users.views import CustomTokenObtainPairView
 from performance.views import performance_summary
 from django.http import HttpResponse
 
+
 def home(request):
     return HttpResponse("Hello from birs-backend!")
 
+def health(request):
+    return HttpResponse("OK")
+
 urlpatterns = [
     path('', home),
+    path('health/', health),
     path("admin/", admin.site.urls),
 
     # Auth
