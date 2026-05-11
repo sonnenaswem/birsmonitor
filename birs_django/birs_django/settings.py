@@ -27,7 +27,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
-DEBUG = os.getenv("DEBUG", "True") == "True" 
+DEBUG = os.getenv("DEBUG", "False") == "True" 
 # DEBUG = env.bool('DEBUG', default=True)
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -35,7 +35,7 @@ DEBUG = os.getenv("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
-    "127.0.0.1,localhost,birs-backend.onrender.com"
+    "127.0.0.1,localhost,.onrender.com,.railway.app"
 ).split(",")
 
 # Application definition
@@ -75,14 +75,15 @@ TEMPLATES = [
 
 
 
+
+
 DATABASES = {
-    'default': dj_database_url.parse(
-        env('DATABASE_URL'),
+    "default": dj_database_url.config(
+        default=os.getenv("DATABASE_URL"),
         conn_max_age=600,
         ssl_require=True
     )
 }
-
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
@@ -130,14 +131,15 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://birs-frontend-production.up.railway.app",
+    "https://birs-frontend.onrender.com",
 ]
 
-CSRF_TRUSTED_ORIGINS = os.getenv(
-    "CSRF_TRUSTED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000,https://birs-frontend-production.up.railway.app,https://birs-backend-production.up.railway.app"
-).split(",")
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://birs-frontend.onrender.com",
+    "https://birs-backend.onrender.com",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'birs_django.urls'
@@ -160,10 +162,11 @@ LOGGING = {
         },
     },
 }
-#security settings for production
-# if not DEBUG:
-#     SECURE_SSL_REDIRECT = True
-#     SESSION_COOKIE_SECURE = True
-#     CSRF_COOKIE_SECURE = True
-#     SECURE_BROWSER_XSS_FILTER = True
-#     SECURE_CONTENT_TYPE_NOSNIFF = True
+
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
