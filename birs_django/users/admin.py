@@ -5,6 +5,7 @@ from .models import CustomUser
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
+    model = CustomUser
     fieldsets = UserAdmin.fieldsets + (
         ('Additional Info', {'fields': ('area_office', 'role')}),
     )
