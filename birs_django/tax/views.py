@@ -17,7 +17,7 @@ from performance.serializers import PerformanceSummarySerializer
 from django.db.models.functions import Coalesce
 from .serializers import (
     TaxEntrySerializer,
-    MonthlyLeagueSnapshotSerializer,
+   
 )
 from birs_django.utils.date_utils  import get_current_period
 from rest_framework.pagination import PageNumberPagination

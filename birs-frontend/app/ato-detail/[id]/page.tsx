@@ -35,7 +35,7 @@ export default function ATODetailPage() {
   useEffect(() => {
     const userId = parseInt(id as string, 10); // ✅ ensure integer
 
-    let url = `/users/ato/${userId}/`;
+    let url = `/api/users/ato/${userId}/`;
 
     if (from && to) {
       url += `?from_date=${from}&to_date=${to}`;

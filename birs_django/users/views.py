@@ -4,7 +4,7 @@ from django.db.models.functions import Coalesce
 from rest_framework.response import Response
 from django.db import transaction, IntegrityError
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import CustomTokenObtainPairSerializer, PerformanceTargetSerializer
+from .serializers import CustomTokenObtainPairSerializer
 from rest_framework.views import APIView
 from rest_framework import status, permissions
 from .models import CustomUser

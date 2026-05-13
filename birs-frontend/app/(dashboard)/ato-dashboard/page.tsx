@@ -11,7 +11,7 @@ export default function AtoDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    api.get("/api/api/performance/summary/")
+    api.get("/api/performance/summary/")
       .then((res) => setData(res.data))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));

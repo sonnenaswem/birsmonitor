@@ -58,7 +58,7 @@ export default function ViewAllEntries() {
   const fetchEntries = async () => {
     setLoading(true);
     try {
-      let url = `/tax/all/?page=${page}&page_size=15`;
+      let url = `/api/tax/all/?page=${page}&page_size=15`;
 
       if (from && to) {
         url += `&from_date=${from}&to_date=${to}`;

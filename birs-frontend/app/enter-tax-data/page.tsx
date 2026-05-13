@@ -29,6 +29,7 @@ export default function EnterTaxDataPage() {
   const [roadSubhead, setRoadSubhead] = useState("");
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState({ type: "", msg: "" });
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -84,7 +85,11 @@ export default function EnterTaxDataPage() {
 
       await api.post("/api/tax/entries/", payload);
 
-      alert("Tax entry submitted successfully!");
+      setStatus({
+        type: "success",
+        msg: "Tax entry submitted successfully!",
+      });
+
 
       setFormData({
         date_of_remittance: new Date().toISOString().slice(0, 10),
@@ -92,8 +97,10 @@ export default function EnterTaxDataPage() {
       setTaxItem("");
       setRoadSubhead("");
     } catch (err: any) {
-      console.log("❌ FULL ERROR:", err.response?.data);
-      alert(JSON.stringify(err.response?.data) || "Submission failed.");
+      setStatus({
+        type: "error",
+        msg: err.response?.data?.error || "Submission failed.",
+      });
     } finally {
       setLoading(false);
     }
@@ -118,6 +125,21 @@ export default function EnterTaxDataPage() {
         <h2 style={{ color: "#064e3b", marginBottom: "20px" }}>
           ➕ New Tax Entry
         </h2>
+        {status.msg && (
+          <div
+            style={{
+              padding: "15px",
+              borderRadius: "8px",
+              marginBottom: "20px",
+              backgroundColor:
+                status.type === "success" ? "#dcfce7" : "#fee2e2",
+              color: status.type === "success" ? "#166534" : "#991b1b",
+              whiteSpace: "pre-line",
+            }}
+          >
+            {status.msg}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: "20px" }}>
