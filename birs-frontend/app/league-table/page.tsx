@@ -19,7 +19,7 @@ export default function LeagueTablePage() {
       if (fromDate) query.append("from_date", fromDate);
       if (toDate) query.append("to_date", toDate);
 
-      const res = await api.get(`/performance/league-table/?${query.toString()}`);
+      const res = await api.get(`/api/performance/league-table/?${query.toString()}`);
       const sortedData = (res.data || []).slice().sort((a: any, b: any) => {
         const percentA = Number(a.percent) || 0;
         const percentB = Number(b.percent) || 0;

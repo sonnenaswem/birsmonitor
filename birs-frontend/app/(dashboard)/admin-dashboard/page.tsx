@@ -110,17 +110,17 @@ export default function AdminDashboard() {
       const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
 
       Promise.all([
-        api.get(`/performance/dashboard/${query}`, {
+        api.get(`/api/performance/dashboard/${query}`, {
           headers: {
             "Cache-Control": "no-cache",
           },
         }),
-        api.get(`/tax/analytics/${query}`, {
+        api.get(`/api/tax/analytics/${query}`, {
           headers: {
             "Cache-Control": "no-cache",
           },
         }),
-        api.get(`/tax/tax-item-aggregate/${query}`, {
+        api.get(`/api/tax/tax-item-aggregate/${query}`, {
           headers: {
             "Cache-Control": "no-cache",
           },
@@ -374,7 +374,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const response = await api.get("/performance/export-csv/", {
+      const response = await api.get("/api/performance/export-csv/", {
         responseType: "blob",
         params: from && to ? { from_date: from, to_date: to } : {},
       });

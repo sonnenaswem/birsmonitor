@@ -46,7 +46,7 @@ export default function MyEntriesPage() {
     setLoading(true);
 
     try {
-      const res = await api.get(`/tax/my-entries/?page=${pageNumber}`);
+      const res = await api.get(`/api/tax/my-entries/?page=${pageNumber}`);
 
       setEntries(res.data.results);
       setCount(res.data.count);
