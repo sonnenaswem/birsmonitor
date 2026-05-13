@@ -21,7 +21,7 @@ export default function CreateUserAndTarget() {
     setLoading(true);
 
     try {
-      await api.post("/users/create-officer/", formData);
+      await api.post("/api/users/create-officer/", formData);
 
       setStatus({
         type: "success",

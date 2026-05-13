@@ -21,7 +21,7 @@ export default function CreateAdminUser() {
 
     try {
       // Endpoint for internal administrative staff (No Target needed)
-      await api.post("/users/create-admin/", formData);
+      await api.post("/api/users/create-admin/", formData);
       setStatus({ type: "success", msg: `${formData.role} account created successfully!` });
     } catch (err: any) {
       setStatus({ type: "error", msg: err.response?.data?.detail || "Failed to create administrative account." });

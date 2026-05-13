@@ -9,7 +9,7 @@ export default function SubmitPayment() {
 
   const handleSubmit = async () => {
     try {
-      const res = await api.post("/payments/submit/", {
+      const res = await api.post("/api/payments/submit/", {
         reference,
       });
 

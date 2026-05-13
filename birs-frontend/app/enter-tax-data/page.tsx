@@ -82,7 +82,7 @@ export default function EnterTaxDataPage() {
         interswitch_amount: hasInterswitch ? Number(formData["amount"]) : null,
       };
 
-      await api.post("/tax/entries/", payload);
+      await api.post("/api/tax/entries/", payload);
 
       alert("Tax entry submitted successfully!");
 
