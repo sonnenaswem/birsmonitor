@@ -48,17 +48,17 @@
 None - all existing routes remain functional.
 
 ## FRONTEND CALLS NOW SUPPORTED
-✅ api.get("/admin/users/")
+✅ api.get("/api/admin/users/")
 ✅ api.patch(`/admin/users/${id}/update/`, {...})
 ✅ api.patch(`/admin/users/${id}/delete/`, {...})
 ✅ api.patch(`/admin/users/${id}/reassign/`, {...})
-✅ api.post("/admin/create-admin-account/", {...})
-✅ api.post("/admin/create-officer-account/", {...})
-✅ api.get("/tax-entries/my/")
-✅ api.get("/leaderboard/?month=X&year=Y")
-✅ api.get("/performance-summary/")
-✅ api.get("/performance/ato/${id}/")
-✅ api.get("/performance/league/")
+✅ api.post("/api/admin/create-admin-account/", {...})
+✅ api.post("/api/admin/create-officer-account/", {...})
+✅ api.get("/api/tax-entries/my/")
+✅ api.get("/api/leaderboard/?month=X&year=Y")
+✅ api.get("/api/performance-summary/")
+✅ api.get("/api/performance/ato/${id}/")
+✅ api.get("/api/performance/league/")
 
 ## NEXT STEPS
 1. Verify frontend imports/calls match these endpoints

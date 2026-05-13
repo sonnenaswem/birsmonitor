@@ -8,7 +8,7 @@ export default function PerformanceSummaryPage() {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    api.get("/performance-summary/")
+    api.get("/api/performance-summary/")
       .then(res => setData(res.data))
       .catch(err => console.error(err));
   }, []);

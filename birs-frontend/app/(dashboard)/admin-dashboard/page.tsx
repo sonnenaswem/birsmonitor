@@ -408,19 +408,19 @@ export default function AdminDashboard() {
     const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
     
     Promise.all([
-      api.get("/performance/dashboard/", {
+      api.get("/api/performance/dashboard/", {
         params: from && to ? {
           from_date: from,
           to_date: to,
         } : {},
       }),
-      api.get("/tax/analytics/", {
+      api.get("/api/tax/analytics/", {
         params: from && to ? {
           from_date: from,
           to_date: to,
         } : {},
       }),
-      api.get("/tax/tax-item-aggregate/", {
+      api.get("/api/tax/tax-item-aggregate/", {
         params: from && to ? {
           from_date: from,
           to_date: to,
