@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.db.models import F, FloatField, ExpressionWrapper, DecimalField, Value
 from django.db.models.functions import Coalesce
 from rest_framework.response import Response
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import CustomTokenObtainPairSerializer, PerformanceTargetSerializer
 from rest_framework.views import APIView
@@ -271,7 +271,6 @@ class ATODetailView(APIView):
                 } for p in recent_payments
             ]
         })
-    
 
 
 class OfficerAccountViewSet(viewsets.ViewSet):
@@ -280,35 +279,42 @@ class OfficerAccountViewSet(viewsets.ViewSet):
     def create(self, request):
         data = request.data
 
-        try:
-            full_name = data.get("full_name")
-            username = data.get("username")
-            password = data.get("password")
-            role = data.get("role", "ato")
-            target = data.get("target")
-            
-            if not username or not password:
-                return Response(
-                    {"error": "Username and password are required"},
-                    status=status.HTTP_400_BAD_REQUEST)
-            
+        full_name = data.get("full_name")
+        username = data.get("username")
+        password = data.get("password")
+        role = data.get("role", "ATO")  # default role
+        email = data.get("email")
+        target_raw = data.get("target")
 
-            # ✅ CREATE USER
+        # ✅ Basic validation
+        if not username or not password:
+            return Response(
+                {"error": "Username and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ✅ Parse target safely
+        try:
+            target_amount = float(target_raw) if target_raw else 0
+        except ValueError:
+            return Response(
+                {"error": "Target must be a valid number"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # ✅ Create user
             user = CustomUser.objects.create_user(
                 username=username,
-                email=data.get("email"),
+                email=email,
                 first_name=full_name.split(" ", 1)[0] if full_name else "",
                 last_name=full_name.split(" ", 1)[1] if full_name and " " in full_name else "",
-                role=data.get("role", "ato"),
-                password=password,                
+                role=role,
+                password=password,
             )
-        
 
-            # ✅ CREATE TARGET
+            # ✅ Create or update monthly target
             now = timezone.now()
-
-            target_amount = float(data.get("target") or 0)
-
             PerformanceTarget.objects.update_or_create(
                 user=user,
                 month=now.month,
@@ -317,18 +323,24 @@ class OfficerAccountViewSet(viewsets.ViewSet):
             )
 
             return Response(
-            {
-                "message": "User and target created successfully",
-                "username": username,
-                # password: password
-            },
-            status=status.HTTP_201_CREATED
-        )
+                {
+                    "message": "User and target created successfully",
+                    "username": username,
+                },
+                status=status.HTTP_201_CREATED
+            )
 
+        except IntegrityError:
+            return Response(
+                {"error": "Username or email already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
-            return Response({
-                "error": str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         
 
 class SetTargetView(APIView):
