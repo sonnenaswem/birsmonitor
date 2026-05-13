@@ -23,7 +23,7 @@ export default function ManageUsers() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchUsers = () => {
-    api.get("/users/").then((res) => setUsers(res.data));
+    api.get("/api/users/").then((res) => setUsers(res.data));
   };
 
   useEffect(() => { fetchUsers(); }, []);
