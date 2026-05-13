@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ from users.models import CustomUser
 from payments.models import Payment
 import csv
 from django.http import HttpResponse
+from .permissions import IsOversightRole
 
 from .models import PerformanceTarget
 import calendar
@@ -287,7 +289,17 @@ def league_table(request):
             date_uploaded__year=year
         )
 
-    atos = CustomUser.objects.filter(role="ato")
+    atos = (
+        CustomUser.objects
+        .filter(role="ato")
+        .only(
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "role"
+        )
+    )
 
     # Aggregate revenue ONCE
     revenue_rows = (
@@ -352,6 +364,13 @@ def league_table(request):
             for t in target_queryset
         }
 
+    cache_key = f"league_table_{month}_{year}_{from_date}_{to_date}"
+
+    cached_data = cache.get(cache_key)
+
+    if cached_data:
+        return Response(cached_data)
+    
     data = []
 
     for ato in atos:
@@ -390,11 +409,14 @@ def league_table(request):
         reverse=True
     )
 
+    cache.set(cache_key, ranked, timeout=60 * 5)
+
+
     return Response(ranked)
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated]) # Allow authenticated users
+@permission_classes([IsOversightRole]) # Allow authenticated users
 def admin_dashboard(request):
     now = timezone.now()
     month = now.month
@@ -403,10 +425,6 @@ def admin_dashboard(request):
     # Check if today is the first day of the month - if so, reset charts to zero
     is_first_day_of_month = now.day == 1
 
-    # Check if the user has an oversight role (Admin or Director)
-    user_role = getattr(request.user, 'role', '').lower()
-    if user_role not in ['admin', 'director', 'auditor']:
-        return Response({"error": "Unauthorized access"}, status=403)
     try:
         from_date = request.GET.get("from_date")
         to_date = request.GET.get("to_date")

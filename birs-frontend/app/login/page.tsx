@@ -27,9 +27,19 @@ export default function LoginPage() {
       });
 
       // Save tokens for middleware and API calls
-      setCookie("access", res.data.access, { maxAge: 60 * 60, path: "/" });
-      setCookie("refresh", res.data.refresh, { maxAge: 60 * 60 * 24, path: "/" });
-      
+      setCookie("access", res.data.access, {
+        maxAge: 60 * 60,
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+
+      setCookie("refresh", res.data.refresh, {
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
       // Save data for client-side logic
       localStorage.setItem("token", res.data.access);
       localStorage.setItem("role", res.data.role?.toLowerCase() || "");

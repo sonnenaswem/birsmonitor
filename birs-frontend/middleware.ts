@@ -26,7 +26,7 @@ export function middleware(req: NextRequest) {
   }
 
   if (req.nextUrl.pathname.startsWith("/admin-dashboard")) {
-    const allowedRoles = ["admin", "director", "auditor"]; // Add auditor if they use this dashboard too
+    const allowedRoles = ["admin", "director", "auditor", "assistant"]; // Add auditor if they use this dashboard too
     if (!allowedRoles.includes(role || "")) {
       return NextResponse.redirect(new URL("/login", req.url));
     }

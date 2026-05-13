@@ -3,64 +3,71 @@ import { getCookie, setCookie, deleteCookie } from "cookies-next";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
+  withCredentials: true,
 });
 
 
-// ✅ RELIABLE COOKIE READER (FIXES YOUR ISSUE)
-function getAccessTokenFromCookie() {
-  if (typeof document === "undefined") return null;
+// ===============================
+// REQUEST INTERCEPTOR
+// ===============================
+api.interceptors.request.use(
+  (config) => {
+    const access = getCookie("access");
 
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("access="));
+    if (access) {
+      config.headers.Authorization = `Bearer ${access}`;
+    }
 
-  return match ? match.split("=")[1] : null;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+
+// ===============================
+// REFRESH ACCESS TOKEN
+// ===============================
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
 }
 
+function onRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
 
-// 🔐 REQUEST INTERCEPTOR
-api.interceptors.request.use((config) => {
-  const access = getAccessTokenFromCookie();
-
-  console.log("🔐 Sending token:", access);
-
-  if (access) {
-    config.headers.Authorization = `Bearer ${access}`;
-  }
-
-  return config;
-});
-
-
-// 🔄 REFRESH TOKEN FUNCTION
 const refreshAccessToken = async () => {
   try {
     const refresh = getCookie("refresh");
 
     if (!refresh) {
-      console.log("❌ No refresh token found");
       return null;
     }
 
-    const res = await axios.post(
+    const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`,
-      { refresh }
+      {
+        refresh,
+      },
+      {
+        withCredentials: true,
+      }
     );
 
-    const newAccess = res.data.access;
-
-    console.log("♻️ Token refreshed");
+    const newAccess = response.data.access;
 
     setCookie("access", newAccess, {
-      maxAge: 60 * 60, // 1 hour
+      maxAge: 60 * 60,
       path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
     });
 
     return newAccess;
-  } catch (err) {
-    console.log("❌ Refresh token failed");
-
-    // ❌ Kill session if refresh fails
+  } catch (error) {
     deleteCookie("access");
     deleteCookie("refresh");
 
@@ -73,30 +80,51 @@ const refreshAccessToken = async () => {
 };
 
 
-// 🚨 RESPONSE INTERCEPTOR (AUTO REFRESH)
+// ===============================
+// RESPONSE INTERCEPTOR
+// ===============================
 api.interceptors.response.use(
   (response) => response,
+
   async (error) => {
     const originalRequest = error.config;
 
-    // 🔥 Prevent retry loops
-    if (!originalRequest || originalRequest._retry) {
+    if (!originalRequest) {
       return Promise.reject(error);
     }
 
     if (
       error.response?.status === 401 &&
+      !originalRequest._retry &&
       !originalRequest.url.includes("/auth/login/")
     ) {
       originalRequest._retry = true;
 
-      console.log("⚠️ 401 detected, attempting refresh...");
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(api(originalRequest));
+          });
+        });
+      }
 
-      const newAccess = await refreshAccessToken();
+      isRefreshing = true;
 
-      if (newAccess) {
+      try {
+        const newAccess = await refreshAccessToken();
+
+        if (!newAccess) {
+          return Promise.reject(error);
+        }
+
+        onRefreshed(newAccess);
+
         originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+
         return api(originalRequest);
+      } finally {
+        isRefreshing = false;
       }
     }
 

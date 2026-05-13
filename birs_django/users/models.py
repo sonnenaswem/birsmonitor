@@ -8,6 +8,7 @@ class CustomUser(AbstractUser):
         ("director", "Director"),
         ("auditor", "Auditor"),
         ("ato", "ATO"),
+        ("assistant", "Assistant"),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="admin")
     area_office = models.CharField(max_length=100, blank=True, null=True, db_index=True)
