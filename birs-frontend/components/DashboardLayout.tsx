@@ -28,16 +28,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
 
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  const role =
-    typeof user?.role === "string"
-      ? user.role
-      : localStorage.getItem("role");
-
-  const userRole = role ? role.toLowerCase() : null;
+    const role =
+      typeof user?.role === "string"
+        ? user.role
+        : localStorage.getItem("role");
+    setUserRole(role ? role.toLowerCase() : null);
+  }, [user])
 
   const handleLogout = () => {
     deleteCookie("access");
