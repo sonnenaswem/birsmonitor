@@ -3,7 +3,7 @@ from rest_framework.permissions import BasePermission
 
 class IsOversightRole(BasePermission):
     """
-    Allows only Admin, Director, or Auditor users.
+    Allows only Admin, Director, Assistant or Auditor users.
     """
 
     def has_permission(self, request, view):
@@ -15,6 +15,6 @@ class IsOversightRole(BasePermission):
         return getattr(user, "role", "").lower() in [
             "admin",
             "director",
-            "auditor"
+            "auditor",
             "assistant",
         ]

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  AreaChart, Area, BarChart, Bar, Cell 
+  LineChart, Line, Area, BarChart, Bar, Cell,
 } from "recharts";
 
 const COLORS = ['#10b981', '#059669', '#047857', '#064e3b'];
@@ -40,7 +40,7 @@ export default function ATODetailPage() {
     if (from && to) {
       url += `?from_date=${from}&to_date=${to}`;
     }
-
+    setLoading(true);
     api.get(url)
       .then(res => setData(res.data))
       .catch(err => {
@@ -70,6 +70,39 @@ export default function ATODetailPage() {
     th: { padding: "12px", textAlign: "left", fontSize: "12px", color: "#64748b", borderBottom: "1px solid #f1f5f9" },
     td: { padding: "12px", borderBottom: "1px solid #f1f5f9", fontSize: "14px" }
   };
+  // ✅ Build full 12-month trend like admin dashboard
+  const trendData = (() => {
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+
+    const fullYear = months.map((month) => ({
+      month,
+      amount: 0,
+    }));
+
+    (data?.activity_trend || []).forEach((item: any) => {
+      const rawMonth =
+        item.month?.slice(0, 3) ||
+        item.date?.slice(0, 3);
+
+      const amount =
+        item.amount ||
+        item.total ||
+        0;
+
+      const monthIndex = months.findIndex(
+        (m) => m.toLowerCase() === rawMonth?.toLowerCase()
+      );
+
+      if (monthIndex !== -1) {
+        fullYear[monthIndex].amount = Number(amount);
+      }
+    });
+
+    return fullYear;
+  })();
   const verifiedPercent = data.total ? (data.pos_total / data.total) * 100 : 0;
   return (
     <DashboardLayout>
@@ -105,7 +138,14 @@ export default function ATODetailPage() {
       </div>
 
       {/* Top Stats Grid */}
-      <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "20px",
+          marginBottom: "30px",
+        }}
+      >
         <div style={styles.statCard}>
           <div style={{ color: "#64748b", fontSize: "12px", fontWeight: "700" }}>TOTAL COLLECTED</div>
           <div style={{ fontSize: "24px", fontWeight: "800", marginTop: "5px" }}>₦{data.total?.toLocaleString()}</div>
@@ -157,53 +197,114 @@ export default function ATODetailPage() {
         <div>
           <div style={{ ...styles.statCard, marginBottom: "30px", height: "350px" }}>
             <h3 style={styles.sectionTitle}><TrendingUp size={20} /> Collection Trend (Last 7 Days)</h3>
-            <ResponsiveContainer width="100%" height="80%">
-              <AreaChart data={data.activity_trend}>
-                <defs>
-                  <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis hide />
-                <Tooltip />
-                <Area type="monotone" dataKey="amount" stroke="#10b981" fillOpacity={1} fill="url(#colorAmount)" strokeWidth={3} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div
+              style={{
+                width: "100%",
+                overflowX: "auto",
+              }}
+            >
+              <div style={{ minWidth: 700, height: "100%" }}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart
+                    data={trendData}
+                    margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#dcfce7"
+                      strokeOpacity={0.5}
+                    />
+
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: "#065f46",
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                      dy={10}
+                    />
+
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: "#065f46",
+                        fontSize: 11,
+                        fontWeight: 500,
+                      }}
+                      tickFormatter={(v) =>
+                        v === 0 ? "0" : `₦${(v / 1000000).toFixed(0)}M`
+                      }
+                    />
+
+                    <Tooltip
+                      formatter={(value: any) =>
+                        `₦${Number(value || 0).toLocaleString()}`
+                      }
+                    />
+
+                    <Line
+                      type="monotone"
+                      dataKey="amount"
+                      stroke="#10b981"
+                      strokeWidth={4}
+                      dot={{
+                        r: 5,
+                        fill: "#ffffff",
+                        stroke: "#10b981",
+                        strokeWidth: 3,
+                      }}
+                      activeDot={{
+                        r: 8,
+                        fill: "#10b981",
+                        stroke: "#ffffff",
+                        strokeWidth: 3,
+                      }}
+                      animationDuration={1200}
+                      connectNulls
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
 
           {/* Recent Payments Table */}
           <div style={styles.statCard}>
             <h3 style={styles.sectionTitle}><Calendar size={20} /> Recent Submissions</h3>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Taxpayer</th>
-                  <th style={styles.th}>Reference</th>
-                  <th style={styles.th}>Amount</th>
-                  <th style={styles.th}>Source</th>
-                  <th style={styles.th}>Date & Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recent_payments?.map((p: any, i: number) => (
-                  <tr key={i}>
-                    <td style={styles.td}>{p.taxpayer}</td>
-                    <td style={styles.td}><code style={{fontSize: "12px"}}>{p.reference}</code></td>
-                    <td style={{ ...styles.td, fontWeight: "700" }}>₦{p.amount?.toLocaleString()}</td>
-                    <td style={styles.td}>
-                      {p.source === 'POS' ? 
-                        <span style={{color: "#10b981", display: "flex", alignItems: "center", gap: "4px"}}><ShieldCheck size={14}/> POS</span> : 
-                        <span style={{color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px"}}><MousePointer2 size={14}/> Manual</span>
-                      }
-                    </td>
-                    <td style={styles.td}>{p.date}</td>
+            <div style={{ overflowX: "auto" }}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Taxpayer</th>
+                    <th style={styles.th}>Reference</th>
+                    <th style={styles.th}>Amount</th>
+                    <th style={styles.th}>Source</th>
+                    <th style={styles.th}>Date & Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.recent_payments?.map((p: any, i: number) => (
+                    <tr key={i}>
+                      <td style={styles.td}>{p.taxpayer}</td>
+                      <td style={styles.td}><code style={{fontSize: "12px"}}>{p.reference}</code></td>
+                      <td style={{ ...styles.td, fontWeight: "700" }}>₦{p.amount?.toLocaleString()}</td>
+                      <td style={styles.td}>
+                        {p.source === 'POS' ? 
+                          <span style={{color: "#10b981", display: "flex", alignItems: "center", gap: "4px"}}><ShieldCheck size={14}/> POS</span> : 
+                          <span style={{color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px"}}><MousePointer2 size={14}/> Manual</span>
+                        }
+                      </td>
+                      <td style={styles.td}>{p.date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

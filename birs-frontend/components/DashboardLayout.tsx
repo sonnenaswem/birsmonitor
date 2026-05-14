@@ -57,11 +57,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: "Manage Users", icon: <Users size={22} />, path: "/manage-users" },
       ];
     }
-      
-    if (userRole === "auditor" || userRole === "director") {
+    
+    if (userRole === "auditor") {
+      return [
+        { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/admin-dashboard" },
+        { name: "View All Entries", icon: <Search size={22} />, path: "/view-all-entries" },
+        { name: "League Table", icon: <Trophy size={22} />, path: "/league-table" },
+      ];
+    }
+
+    if (userRole === "director") {
       return oversightItems;
     }
-    
+    if (userRole === "assistant") {
+      return [
+        { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/admin-dashboard" },
+        { name: "View All Entries", icon: <Search size={22} />, path: "/view-all-entries" },
+        { name: "League Table", icon: <Trophy size={22} />, path: "/league-table" }, 
+        { name: "Create ATO & Targets", icon: <Target size={22} />, path: "/create-ato" },
+      ];
+    }
     // ATO Terminal
     return [
       { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/ato-dashboard" },

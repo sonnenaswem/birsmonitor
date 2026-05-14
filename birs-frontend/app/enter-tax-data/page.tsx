@@ -6,9 +6,9 @@ import DashboardLayout from "@/components/DashboardLayout";
 
 const fieldMap: Record<string, string[]> = {
   PAYE: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Withholding: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Development: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Business: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  WHT: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  Dev_Levy: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  Bus_Prem: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   Penalty: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   Interest: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   Personal: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
@@ -69,7 +69,7 @@ export default function EnterTaxDataPage() {
       // ✅ CLEAN PAYLOAD (THIS FIXES EVERYTHING)
       const payload = {
         tax_item: taxItem,
-        subhead: taxItem === "Road" ? roadSubhead : taxItem,
+        subhead: taxItem === "Road_Taxes" ? roadSubhead : taxItem,
 
         taxpayer_name: formData["taxpayer's_name"] || "",
         date_of_remittance: formData["date_of_remittance"] || null,
@@ -107,7 +107,7 @@ export default function EnterTaxDataPage() {
   };
 
   const fields =
-    taxItem === "Road"
+    taxItem === "Road_Taxes"
       ? fieldMap[roadSubhead] || []
       : fieldMap[taxItem] || [];
 
@@ -157,17 +157,17 @@ export default function EnterTaxDataPage() {
             >
               <option value="">— Choose —</option>
               <option value="PAYE">PAYE</option>
-              <option value="Withholding">Withholding Tax</option>
-              <option value="Road">Road Taxes</option>
-              <option value="Development">Development Levy</option>
-              <option value="Business">Business Premises</option>
+              <option value="WHT">Withholding Tax</option>
+              <option value="Road_Taxes">Road Taxes</option>
+              <option value="Dev_Levy">Development Levy</option>
+              <option value="Bus_Prem">Business Premises</option>
               <option value="Penalty">Penalty For Offences</option>
               <option value="Interest">Interest On Tax Defaulters</option>
-              <option value="Personal">Personal Income Tax</option>
+              <option value="PIT">Personal Income Tax</option>
             </select>
           </div>
 
-          {taxItem === "Road" && (
+          {taxItem === "Road_Taxes" && (
             <div style={{ marginBottom: "20px" }}>
               <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>
                 Road Tax Type
@@ -184,12 +184,12 @@ export default function EnterTaxDataPage() {
                     (k) =>
                       ![
                         "PAYE",
-                        "Withholding",
-                        "Development",
-                        "Business",
+                        "WHT",
+                        "Dev_Levy",
+                        "Bus_Prem",
                         "Penalty",
                         "Interest",
-                        "Personal",
+                        "PIT",
                       ].includes(k)
                   )
                   .map((sub) => (

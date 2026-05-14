@@ -80,9 +80,10 @@ export default function CreateAdminUser() {
                 value={formData.role}
                 onChange={e => setFormData({...formData, role: e.target.value})}
               >
-                <option value="DIRECTOR">Director</option>
-                <option value="AUDITOR">Auditor</option>
-                <option value="SUPERADMIN">Super Admin</option>
+                <option value="admin">Super Admin</option>
+                <option value="director">Director</option>
+                <option value="auditor">Auditor</option>
+                <option value="assistant">Assistant</option>
               </select>
             </div>
             <div>

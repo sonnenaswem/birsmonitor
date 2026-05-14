@@ -100,13 +100,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!authLoading && (!user || !user.role)) {
       router.push("/login");
-    } else if (user?.role && !["director", "admin", "auditor"].includes(user.role)) {
+    } else if (user?.role && !["director", "admin", "auditor", "assistant"].includes(user.role)) {
       router.push("/ato-dashboard");
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user && ["director", "admin", "auditor"].includes(user.role)) {
+    if (user && ["director", "admin", "auditor", "assistant"].includes(user.role)) {
       const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
 
       Promise.all([
@@ -161,13 +161,41 @@ export default function AdminDashboard() {
   }, [user, from, to]);
 
   // Chart data preparation with memoization for performance
-  const revenueTrendData = useMemo(() => 
-    data?.monthly_trend?.map((item: any) => ({
-      month: item.month?.slice(0, 3) || "N/A",
-      revenue: item.total ?? item.amount ?? item.revenue ?? 0,
-      fullMonth: item.month,
-    })) || [], 
-  [data]);
+  const revenueTrendData = useMemo(() => {
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+
+    // Create base 12-month structure
+    const fullYearData = months.map((month) => ({
+      month,
+      revenue: 0,
+    }));
+
+    // Inject backend values into matching months
+    (data?.monthly_trend || []).forEach((item: any) => {
+      const rawMonth =
+        item.month?.slice(0, 3) ||
+        item.name?.slice(0, 3);
+
+      const revenue =
+        item.total ??
+        item.amount ??
+        item.revenue ??
+        0;
+
+      const monthIndex = months.findIndex(
+        (m) => m.toLowerCase() === rawMonth?.toLowerCase()
+      );
+
+      if (monthIndex !== -1) {
+        fullYearData[monthIndex].revenue = Number(revenue);
+      }
+    });
+
+    return fullYearData;
+  }, [data]);
 
   const atoPerformanceData = useMemo(() => 
     analyticsData?.ato_performance?.map((item: any) => {
@@ -523,22 +551,136 @@ export default function AdminDashboard() {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.7; transform: scale(0.95); }
         }
+
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-4px); }
         }
+
         @keyframes slideIn {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
+
+        /* LARGE TABLETS */
         @media (max-width: 1300px) {
-          .kpi-grid { grid-template-columns: repeat(5, 1fr) !important; }
-          .chart-grid-2 { grid-template-columns: 1fr !important; }
+          .kpi-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+          }
+
+          .chart-grid-2 {
+            grid-template-columns: 1fr !important;
+          }
         }
+
+        /* TABLETS */
         @media (max-width: 1024px) {
-          .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .header-actions { flex-direction: column; align-items: flex-start !important; }
+          .kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+
+          .header-actions {
+            flex-direction: column;
+            align-items: flex-start !important;
+          }
         }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+
+          .kpi-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .chart-grid-2 {
+            grid-template-columns: 1fr !important;
+          }
+
+          .dashboard-container {
+            padding: 14px !important;
+          }
+
+          .dashboard-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 16px !important;
+          }
+
+          .dashboard-title {
+            font-size: 22px !important;
+          }
+
+          .chart-card {
+            padding: 16px !important;
+            overflow-x: auto;
+          }
+
+          .chart-title {
+            font-size: 14px !important;
+          }
+
+          .kpi-card {
+            padding: 18px !important;
+            min-width: 0;
+          }
+
+          .kpi-value {
+            font-size: 20px !important;
+            word-break: break-word;
+          }
+
+          .kpi-label {
+            font-size: 11px !important;
+          }
+
+          .recharts-wrapper {
+            font-size: 11px !important;
+          }
+
+          .recharts-cartesian-axis-tick-value {
+            font-size: 10px !important;
+          }
+
+          .recharts-legend-wrapper {
+            font-size: 11px !important;
+          }
+
+          input[type="date"] {
+            width: 100%;
+          }
+        
+          svg {
+            overflow: visible;
+          }
+          
+          .recharts-responsive-container {
+            min-width: 100%;
+          }
+        }
+        /* SMALL PHONES */
+        @media (max-width: 480px) {
+
+          .dashboard-container {
+            padding: 10px !important;
+          }
+
+          .dashboard-title {
+            font-size: 20px !important;
+          }
+
+          .kpi-value {
+            font-size: 18px !important;
+          }
+
+          .chart-card {
+            padding: 12px !important;
+          }
+
+          .chart-title {
+            font-size: 13px !important;
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after {
             animation-duration: 0.01ms !important;
@@ -547,12 +689,17 @@ export default function AdminDashboard() {
         }
       `}</style>
 
-      <div style={{
-        ...styles.container,
-        background: colors.backgroundGradient,
-      }}>
+      <div
+        className="dashboard-container"
+        style={{
+          ...styles.container,
+          background: colors.backgroundGradient,
+        }}
+      >
         {/* ✨ Enhanced Header with Date Filters */}
-        <div style={{
+        <div 
+          className="dashboard-header"
+          style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -699,7 +846,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ✨ Main Header */}
-        <div style={styles.header}>
+        <div className="dashboard-header" style={styles.header}>
           <div style={styles.headerLeft}>
             <div style={{
               ...styles.headerIcon,
@@ -708,7 +855,7 @@ export default function AdminDashboard() {
               <Sparkles size={24} />
             </div>
             <div>
-              <h1 style={styles.headerTitle}>Admin Dashboard</h1>
+              <h1 className="dashboard-title" style={styles.headerTitle}>Admin Dashboard</h1>
               <p style={styles.headerSub}>
                 Real-time Revenue Performance & Analytics
               </p>
@@ -726,22 +873,6 @@ export default function AdminDashboard() {
               <span style={styles.liveDot} />
               <span style={styles.liveText}>Live Data</span>
             </div>
-            {/* <button
-              style={styles.downloadBtn}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = `0 6px 20px ${colors.glowGreen}`;
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = `0 4px 14px ${colors.glowEmerald}`;
-              }}
-              onClick={() => handleDownload("excel")}
-              disabled={!!activeDownload}
-            >
-              <Download size={16} />
-              {activeDownload === "excel" ? "Preparing..." : "Download Reports"}
-            </button> */}
           </div>
         </div>
 
@@ -802,6 +933,7 @@ export default function AdminDashboard() {
           ].map((card, i) => (
             <div
               key={i}
+              className="kpi-card"
               style={{
                 ...styles.kpiCard,
                 background: styles.kpiCard.background,
@@ -860,11 +992,16 @@ export default function AdminDashboard() {
                   {card.label}
                 </span>
               </div>
-              <p style={{ 
-                ...styles.kpiValue, 
-                fontSize: "26px",
-                marginBottom: "4px",
-              }}>
+              <p 
+                className="kpi-value"
+                style={{ 
+                  ...styles.kpiValue, 
+                  fontSize: "clamp(16px, 4vw, 26px)",
+                  lineHeight: 1.2,
+                  overflowWrap: "break-word",
+                  wordBreak: "break-word",
+                  marginBottom: "4px",
+                }}>
                 {card.value}
               </p>
               <span style={{
@@ -893,7 +1030,9 @@ export default function AdminDashboard() {
           }}>
             <div style={styles.chartHeader}>
               <div>
-                <h4 style={{ ...styles.chartTitle, display: "flex", alignItems: "center", gap: "8px" }}>
+                <h4
+                  className="chart-title" 
+                  style={{ ...styles.chartTitle, display: "flex", alignItems: "center", gap: "8px" }}>
                   <TrendingUp size={18} style={{ color: colors.accent }} />
                   Revenue Trend
                 </h4>
@@ -922,61 +1061,80 @@ export default function AdminDashboard() {
             </div>
 
             {revenueTrendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={320}>
-                <AreaChart data={revenueTrendData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={colors.accent} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={colors.accent} stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid 
-                    strokeDasharray="4 4" 
-                    vertical={false} 
-                    stroke={colors.borderLight} 
-                    strokeOpacity={0.6}
-                  />
-                  <XAxis 
-                    dataKey="month" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: colors.textMuted, fontSize: 11, fontWeight: 500 }}
-                    dy={8}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: colors.textMuted, fontSize: 11, fontWeight: 500 }}
-                    tickFormatter={(v) => `₦${v / 1000000}M`}
-                    dx={-8}
-                  />
-                  <Tooltip content={<CustomTooltip formatter={formatCurrency} />} />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke={colors.accent}
-                    strokeWidth={3}
-                    fill="url(#revenueGradient)"
-                    fillOpacity={1}
-                    dot={{ 
-                      r: 4, 
-                      fill: colors.card, 
-                      stroke: colors.accent, 
-                      strokeWidth: 2,
-                      strokeOpacity: 1,
-                    }}
-                    activeDot={{ 
-                      r: 7, 
-                      fill: colors.accent, 
-                      stroke: colors.card, 
-                      strokeWidth: 3,
-                      filter: "drop-shadow(0 4px 8px rgba(16, 185, 129, 0.4))",
-                    }}
-                    animationDuration={chartAnimation ? 1200 : 0}
-                    animationBegin={chartAnimation ? 200 : 0}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div
+                style={{
+                  width: "100%",
+                  overflowX: "auto",
+                }}
+              >
+                <div style={{ minWidth: 700 }}>
+              
+                  <ResponsiveContainer width="100%" height={320}>
+                    <LineChart
+                      data={revenueTrendData}
+                      margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke={colors.borderLight}
+                        strokeOpacity={0.5}
+                      />
+
+                      <XAxis
+                        dataKey="month"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fill: colors.textMuted,
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                        dy={10}
+                      />
+
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fill: colors.textMuted,
+                          fontSize: 11,
+                          fontWeight: 500,
+                        }}
+                        tickFormatter={(v) =>
+                          v === 0 ? "0" : `₦${(v / 1000000).toFixed(0)}M`
+                        }
+                      />
+
+                      <Tooltip
+                        content={<CustomTooltip formatter={formatCurrency} />}
+                      />
+
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke={colors.accent}
+                        strokeWidth={4}
+                        dot={{
+                          r: 5,
+                          fill: colors.card,
+                          stroke: colors.accent,
+                          strokeWidth: 3,
+                        }}
+                        activeDot={{
+                          r: 8,
+                          fill: colors.accent,
+                          stroke: colors.card,
+                          strokeWidth: 3,
+                        }}
+                        animationDuration={1200}
+                        connectNulls
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+
+                </div>
+              </div>
             ) : (
               <div style={{
                 ...styles.emptyState,
@@ -1001,7 +1159,8 @@ export default function AdminDashboard() {
                 <p style={{ ...styles.emptyText, fontSize: "15px", fontWeight: 500, marginBottom: "6px" }}>
                   No trend data available
                 </p>
-                <p style={{ fontSize: "13px", color: colors.textLight }}>
+                <p 
+                  style={{ fontSize: "13px", color: colors.textLight }}>
                   Revenue data will appear once collections are recorded
                 </p>
               </div>
@@ -1021,7 +1180,9 @@ export default function AdminDashboard() {
           }}>
             <div style={styles.chartHeader}>
               <div>
-                <h4 style={{ ...styles.chartTitle, display: "flex", alignItems: "center", gap: "8px" }}>
+                <h4
+                  className="chart-title" 
+                  style={{ ...styles.chartTitle, display: "flex", alignItems: "center", gap: "8px" }}>
                   <Users size={18} style={{ color: colors.primaryMid }} />
                   Target Achievement by ATO
                 </h4>
@@ -1056,7 +1217,7 @@ export default function AdminDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart 
                       data={atoPerformanceData} 
-                      margin={{ top: 20, right: 20, left: 10, bottom: 70 }}
+                      margin={{ top: 20, right: 20, left: 10, bottom: 100 }}
                       barGap={4}
                     >
                       <CartesianGrid 
@@ -1132,7 +1293,8 @@ export default function AdminDashboard() {
                 border: `2px dashed ${colors.border}`,
               }}>
                 <Users size={32} style={{ color: colors.textLight, marginBottom: "12px" }} />
-                <p style={{ ...styles.emptyText, fontSize: "15px", fontWeight: 500, marginBottom: "6px" }}>
+                <p
+                  style={{ ...styles.emptyText, fontSize: "15px", fontWeight: 500, marginBottom: "6px" }}>
                   No ATO performance data
                 </p>
                 <p style={{ fontSize: "13px", color: colors.textLight }}>
@@ -1143,14 +1305,18 @@ export default function AdminDashboard() {
           </div>
 
           {/* ✨ Tax Revenue by Item - Full Width with Gradient Bars */}
-          <div style={{
+          <div
+            className="chart-card" 
+            style={{
             ...styles.chartCard,
             animation: chartAnimation ? "slideIn 0.6s ease forwards 0.5s" : "none",
             opacity: chartAnimation ? 1 : 0,
           }}>
             <div style={styles.chartHeader}>
               <div>
-                <h4 style={{ ...styles.chartTitle, display: "flex", alignItems: "center", gap: "8px" }}>
+                <h4
+                  className="chart-title" 
+                  style={{ ...styles.chartTitle, display: "flex", alignItems: "center", gap: "8px" }}>
                   <Wallet size={18} style={{ color: colors.primary }} />
                   Revenue by Tax Item
                 </h4>
@@ -1223,7 +1389,7 @@ export default function AdminDashboard() {
                   >
                     <LabelList
                       dataKey="value"
-                      position="center"
+                      position="right"
                       style={{ 
                         fill: colors.text, 
                         fontSize: 12, 
@@ -1254,7 +1420,8 @@ export default function AdminDashboard() {
                 border: `2px dashed ${colors.border}`,
               }}>
                 <Wallet size={32} style={{ color: colors.textLight, marginBottom: "12px" }} />
-                <p style={{ ...styles.emptyText, fontSize: "15px", fontWeight: 500, marginBottom: "6px" }}>
+                <p 
+                  style={{ ...styles.emptyText, fontSize: "15px", fontWeight: 500, marginBottom: "6px" }}>
                   No tax item breakdown available
                 </p>
                 <p style={{ fontSize: "13px", color: colors.textLight }}>
@@ -1274,7 +1441,9 @@ export default function AdminDashboard() {
             opacity: chartAnimation ? 1 : 0,
           }}>
             <div style={styles.chartHeader}>
-              <h4 style={{ 
+              <h4
+                className="chart-title" 
+                style={{ 
                 ...styles.chartTitle, 
                 color: colors.success,
                 display: "flex", 
@@ -1339,7 +1508,7 @@ export default function AdminDashboard() {
                   >
                     <LabelList
                       dataKey="amount"
-                      position="center"
+                      position="right"
                       style={{ 
                         fill: colors.text, 
                         fontSize: 12, 
@@ -1374,7 +1543,9 @@ export default function AdminDashboard() {
             opacity: chartAnimation ? 1 : 0,
           }}>
             <div style={styles.chartHeader}>
-              <h4 style={{ 
+              <h4
+                className="chart-title" 
+                style={{ 
                 ...styles.chartTitle, 
                 color: colors.danger,
                 display: "flex", 
@@ -1664,7 +1835,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     letterSpacing: "0.04em",
   },
   kpiValue: {
-    fontSize: "26px",
+    fontSize: "clamp(16px, 4vw, 26px)",
     fontWeight: 700,
     color: "#022c22",
     margin: 0,

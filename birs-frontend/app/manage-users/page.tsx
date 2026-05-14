@@ -155,6 +155,7 @@ export default function ManageUsers() {
                       <option value="admin">Admin</option>
                       <option value="director">Director</option>
                       <option value="auditor">Auditor</option>
+                      <option value="assistant">Assistant</option>
                     </select>
                   )}
                 </td>
