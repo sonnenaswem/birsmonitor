@@ -1389,7 +1389,7 @@ export default function AdminDashboard() {
                   >
                     <LabelList
                       dataKey="value"
-                      position="right"
+                      position="center"
                       style={{ 
                         fill: colors.text, 
                         fontSize: 12, 
@@ -1508,7 +1508,7 @@ export default function AdminDashboard() {
                   >
                     <LabelList
                       dataKey="amount"
-                      position="right"
+                      position="center"
                       style={{ 
                         fill: colors.text, 
                         fontSize: 12, 
@@ -1610,7 +1610,7 @@ export default function AdminDashboard() {
                   >
                     <LabelList
                       dataKey="amount"
-                      position="right"
+                      position="center"
                       style={{ 
                         fill: colors.text, 
                         fontSize: 12, 

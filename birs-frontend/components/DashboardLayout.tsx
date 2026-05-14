@@ -24,14 +24,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
+  
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
-    setUserRole(localStorage.getItem("role"));
   }, []);
+
+  const role =
+    typeof user?.role === "string"
+      ? user.role
+      : localStorage.getItem("role");
+
+  const userRole = role ? role.toLowerCase() : null;
 
   const handleLogout = () => {
     deleteCookie("access");
@@ -78,11 +84,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ];
     }
     // ATO Terminal
-    return [
-      { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/ato-dashboard" },
-      { name: "Enter Tax Data", icon: <PenLine size={22} />, path: "/enter-tax-data" },
-      { name: "My Submissions", icon: <History size={22} />, path: "/view-entries" },
-    ];
+    if (userRole === "ato") {
+      return [
+        { name: "Dashboard", icon: <LayoutDashboard size={22} />, path: "/ato-dashboard" },
+        { name: "Enter Tax Data", icon: <PenLine size={22} />, path: "/enter-tax-data" },
+        { name: "My Submissions", icon: <History size={22} />, path: "/view-entries" },
+      ];
+    }
+
+    // Unknown role fallback
+    return [];
   };
 
   const menuItems = getMenuItems();
@@ -214,7 +225,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           
           <div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", margin: 0, color: "#052e16" }}>
-              {userRole === "admin" || userRole === "director" ? "Administrative Oversight" : "Tax Officer Terminal"}
+              {["admin", "director", "auditor", "assistant"].includes(userRole || "")
+                ? "Administrative Oversight"
+                : "Tax Officer Terminal"}
             </h2>
             <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Benue State Internal Revenue Service</p>
           </div>

@@ -391,19 +391,33 @@ class SetTargetView(APIView):
     
 
 class CreateAdminAccountView(APIView):
+    permission_classes = [permissions.IsAdminUser]
     def post(self, request):
         data = request.data
-        try:
-            user = CustomUser.objects.create_user(
-                username=data['username'],
-                email=data.get('email', ''),
-                password=data['password'],
-                first_name=data.get('first_name', ''),
-                last_name=data.get('last_name', ''),
-                role=data.get('role', 'admin').lower()
-            )
-            return Response({"message": f"{user.role} account created successfully!"}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
 
+        try:
+            full_name = data.get("full_name", "").strip()
+            name_parts = full_name.split(" ", 1)
+
+            first_name = name_parts[0] if len(name_parts) > 0 else ""
+            last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+            user = CustomUser.objects.create_user(
+                username=data["username"],
+                email=data.get("email", ""),
+                password=data["password"],
+                first_name=first_name,
+                last_name=last_name,
+                role=data.get("role", "admin").lower()
+            )
+
+            return Response(
+                {"message": f"{user.role} account created successfully!"},
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )

@@ -31,7 +31,11 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
   }
-  
+
+  if (req.nextUrl.pathname.startsWith("/auditor-dashboard") && role !== "auditor") {
+      return NextResponse.redirect(new URL("/login", req.url));
+  }
+
   if (req.nextUrl.pathname.startsWith("/ato-dashboard") && role !== "ato") {
     return NextResponse.redirect(new URL("/login", req.url));
   }
@@ -40,5 +44,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin-dashboard/:path*", "/director-dashboard/:path*", "/ato-dashboard/:path*"],
+  matcher: [
+    "/admin-dashboard/:path*",
+    "/ato-dashboard/:path*",
+  ],
 };

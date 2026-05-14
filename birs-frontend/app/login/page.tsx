@@ -51,7 +51,7 @@ export default function LoginPage() {
       setUser({ role: userRole || null, fullName: res.data.full_name || null });
 
       // Precise Redirection logic
-      const adminRoles = ["admin", "director", "auditor"];
+      const adminRoles = ["admin", "director", "auditor", "assistant"];
 
       if (adminRoles.includes(userRole)) {
         router.push("/admin-dashboard");

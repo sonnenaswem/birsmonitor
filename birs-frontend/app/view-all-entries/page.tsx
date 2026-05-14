@@ -107,7 +107,7 @@ export default function ViewAllEntries() {
     if (!confirmation) return;
 
     try {
-      await api.delete(`/tax/entries/${id}/delete/`);
+      await api.delete(`/api/tax/entries/${id}/delete/`);
       setEntries(entries.filter(e => e.id !== id));
       alert("Manual entry successfully removed.");
     } catch (err: any) {
