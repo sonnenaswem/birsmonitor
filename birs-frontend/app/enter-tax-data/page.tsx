@@ -11,7 +11,12 @@ const fieldMap: Record<string, string[]> = {
   Bus_Prem: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   Penalty: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   Interest: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Personal: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  PIT: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  Sch_Reg_Ren: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  Sch_Maint_Fees: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  FSC: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  Produce: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  Toxic_Emmision: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   "Vehicle License": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   "Hackney Permit": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   "Road Worthiness": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
@@ -164,6 +169,11 @@ export default function EnterTaxDataPage() {
               <option value="Penalty">Penalty For Offences</option>
               <option value="Interest">Interest On Tax Defaulters</option>
               <option value="PIT">Personal Income Tax</option>
+              <option value="Sch_Reg_Ren">School Registration/Renewal</option>
+              <option value="Sch_Maint_Fees">School Maintenance Fees</option>
+              <option value="FSC">Fire Service Charge</option>
+              <option value="Produce">Produce</option>
+              <option value="Toxic_Emmision">Toxic Emmision</option>
             </select>
           </div>
 
