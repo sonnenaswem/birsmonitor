@@ -41,7 +41,7 @@ export default function ManageUsers() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
-      await api.patch(`/users/${selectedUser.id}/reassign/`, newOfficer);
+      await api.patch(`/api/users/${selectedUser.id}/reassign/`, newOfficer);
       alert("Station refreshed with new officer.");
       setSelectedUser(null);
       setMode(null);
