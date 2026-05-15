@@ -173,7 +173,7 @@ export default function EnterTaxDataPage() {
               <option value="Sch_Maint_Fees">School Maintenance Fees</option>
               <option value="FSC">Fire Service Charge</option>
               <option value="Produce">Produce</option>
-              <option value="Toxic_Emmision">Toxic Emmision</option>
+              <option value="Toxic_Emmisions">Toxic Emmision</option>
             </select>
           </div>
 
