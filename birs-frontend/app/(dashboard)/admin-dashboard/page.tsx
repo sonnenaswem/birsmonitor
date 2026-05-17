@@ -1022,7 +1022,7 @@ export default function AdminDashboard() {
         {/* ✨ Charts Section with Enhanced Visuals */}
 
         {/* Row 1: Revenue Trend - Full Width with Area Chart */}
-        <div style={{ marginBottom: "24px" }}>
+        <div style={{ marginBottom: "24px", width: "100%" }}>
           <div style={{
             ...styles.chartCard,
             animation: chartAnimation ? "slideIn 0.6s ease forwards 0.3s" : "none",
@@ -1061,13 +1061,9 @@ export default function AdminDashboard() {
             </div>
 
             {revenueTrendData.length > 0 ? (
-              <div
-                style={{
-                  width: "100%",
-                  overflowX: "auto",
-                }}
-              >
-                <div style={{ minWidth: 700 }}>
+              /* ✨ SURGICAL FIX: The chart parent now handles inner swiping perfectly without page shifting */
+              <div style={styles.scrollableChartWrapper}>
+                <div style={{ minWidth: 750 }}>
               
                   <ResponsiveContainer width="100%" height={320}>
                     <LineChart
@@ -1169,7 +1165,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 2: ATO Performance + Tax Item Breakdown */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px", marginBottom: "24px" }}>
+        {/* ✨ SURGICAL FIX: Using dynamic grid layouts directly here to match device queries natively */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px", marginBottom: "24px" }}>
 
           {/* ✨ % Target Achieved per ATO - Horizontal Scroll with Enhanced Bars */}
           <div style={{
@@ -1201,15 +1198,8 @@ export default function AdminDashboard() {
             </div>
 
             {atoPerformanceData.length > 0 ? (
-              <div style={{ 
-                width: "100%", 
-                overflowX: "auto", 
-                overflowY: "hidden",
-                paddingBottom: "16px",
-                WebkitOverflowScrolling: "touch",
-                scrollbarWidth: "thin",
-                scrollbarColor: `${colors.accent} transparent`,
-              }}>
+              /* ✨ SURGICAL FIX: Placed inside our touch-safe wrapper */
+              <div style={styles.scrollableChartWrapper}>
                 <div style={{ 
                   minWidth: Math.max(800, atoPerformanceData.length * 60),
                   height: 400,
@@ -1304,14 +1294,15 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* ✨ Tax Revenue by Item - Full Width with Gradient Bars */}
+          {/* ✨ Tax Revenue by Item - Matching Vertical Column Chart */}
           <div
             className="chart-card" 
             style={{
-            ...styles.chartCard,
-            animation: chartAnimation ? "slideIn 0.6s ease forwards 0.5s" : "none",
-            opacity: chartAnimation ? 1 : 0,
-          }}>
+              ...styles.chartCard,
+              animation: chartAnimation ? "slideIn 0.6s ease forwards 0.5s" : "none",
+              opacity: chartAnimation ? 1 : 0,
+            }}
+          >
             <div style={styles.chartHeader}>
               <div>
                 <h4
@@ -1341,76 +1332,86 @@ export default function AdminDashboard() {
             </div>
 
             {taxItemChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={380}>
-                <BarChart 
-                  data={taxItemChartData.slice(0, 12)} 
-                  layout="vertical"
-                  margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-                  barGap={6}
-                >
-                  {taxItemChartData.slice(0, 12).map((item: any, index: number) => 
-                    getgradientDef(item.gradientId, [item.fill, `${item.fill}cc`])
-                  )}
-                  <CartesianGrid 
-                    strokeDasharray="4 4" 
-                    horizontal={true} 
-                    vertical={false} 
-                    stroke={colors.borderLight}
-                    strokeOpacity={0.5}
-                  />
-                  <XAxis 
-                    type="number" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: colors.textMuted, fontSize: 11, fontWeight: 500 }}
-                    tickFormatter={(v) => `₦${(v / 1).toLocaleString()}`}
-                  />
-                  <YAxis 
-                    dataKey="name"
-                    type="category" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ 
-                      fill: colors.text, 
-                      fontSize: 12, 
-                      fontWeight: 600,
-                      textAnchor: "end",
-                    }}
-                    width={120}
-                  />
-                  <Tooltip content={<CustomTooltip formatter={formatCurrency} />} />
-                  <Bar 
-                    dataKey="value" 
-                    name="Revenue"
-                    radius={[0, 8, 8, 0]}
-                    barSize={38}
-                    animationDuration={chartAnimation ? 1000 : 0}
-                    animationBegin={chartAnimation ? 400 : 0}
-                  >
-                    <LabelList
-                      dataKey="value"
-                      position="center"
-                      style={{ 
-                        fill: colors.text, 
-                        fontSize: 12, 
-                        fontWeight: 700,
-                        fontFamily: "monospace",
-                      }}
-                      formatter={(v: any) => formatCurrency(v)}
-                    />
-                    {taxItemChartData.slice(0, 12).map((entry: any, index: number) => (
-                      <Cell 
-                        key={`tax-bar-${index}`} 
-                        fill={`url(#${entry.gradientId})`}
-                        style={{
-                          filter: index === 0 ? `drop-shadow(0 4px 12px ${colors.glowGreen})` : "none",
-                          transition: "filter 0.3s",
-                        }}
+              /* Placed inside the scrollable wrapper so it behaves exactly like the ATO chart on mobile */
+              <div style={styles.scrollableChartWrapper}>
+                <div style={{ 
+                  minWidth: Math.max(600, taxItemChartData.slice(0, 12).length * 60), 
+                  height: 400 
+                }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={taxItemChartData.slice(0, 12)} 
+                      margin={{ top: 25, right: 20, left: 10, bottom: 80 }}
+                    >
+                      {/* Standard vertical column gradient definition setup */}
+                      <defs>
+                        {taxItemChartData.slice(0, 12).map((item: any, index: number) => (
+                          <linearGradient key={`tax-grad-${index}`} id={item.gradientId || `taxGrad-${index}`} x1="0" y1="1" x2="0" y2="0">
+                            <stop offset="0%" stopColor={item.fill || colors.primary} />
+                            <stop offset="100%" stopColor={item.fill ? `${item.fill}cc` : colors.primaryMid} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        vertical={false} 
+                        stroke={colors.borderLight}
+                        strokeOpacity={0.5}
                       />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                      
+                      {/* 1. Labels stack along the bottom horizontal X-Axis */}
+                      <XAxis
+                        dataKey="name"
+                        interval={0}
+                        angle={-45}
+                        textAnchor="end"
+                        height={40}
+                        tick={{ fill: colors.textMuted, fontSize: 11, fontWeight: 500 }}
+                        tickLine={false}
+                        axisLine={{ stroke: colors.border, strokeWidth: 1 }}
+                      />
+                      
+                      {/* 2. Numerical values run up the vertical Y-Axis */}
+                      <YAxis 
+                        tick={{ fill: colors.textMuted, fontSize: 11, fontWeight: 500 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => v === 0 ? "0" : `₦${(v / 1000000).toFixed(1)}M`}
+                      />
+                      
+                      <Tooltip content={<CustomTooltip formatter={formatCurrency} />} />
+                      
+                      <Bar 
+                        dataKey="value" 
+                        name="Revenue"
+                        radius={[6, 6, 0, 0]} /* 3. Rounds the top edges cleanly */
+                        barSize={28}
+                        animationDuration={chartAnimation ? 1000 : 0}
+                      >
+                        {/* 4. Positions metrics clearly floating right above each column bar */}
+                        <LabelList
+                          dataKey="value"
+                          position="top"
+                          dy={-10}
+                          style={{ 
+                            fill: colors.primaryMid || "#4b5563", // Clean TypeScript typing match
+                            fontSize: 10, 
+                            fontWeight: 700,
+                          }}
+                          formatter={(v: any) => `₦${(v / 1000000).toFixed(1)}M`}
+                        />
+                        {taxItemChartData.slice(0, 12).map((entry: any, index: number) => (
+                          <Cell 
+                            key={`tax-cell-${index}`} 
+                            fill={`url(#${entry.gradientId || `taxGrad-${index}`})`}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             ) : (
               <div style={{
                 ...styles.emptyState,
@@ -1420,8 +1421,7 @@ export default function AdminDashboard() {
                 border: `2px dashed ${colors.border}`,
               }}>
                 <Wallet size={32} style={{ color: colors.textLight, marginBottom: "12px" }} />
-                <p 
-                  style={{ ...styles.emptyText, fontSize: "15px", fontWeight: 500, marginBottom: "6px" }}>
+                <p style={{ ...styles.emptyText, fontSize: "15px", fontWeight: 500, marginBottom: "6px" }}>
                   No tax item breakdown available
                 </p>
                 <p style={{ fontSize: "13px", color: colors.textLight }}>
@@ -1709,12 +1709,15 @@ export default function AdminDashboard() {
   );
 }
 
-// ✨ Polished Styles Object
+// ✨ Polished & Responsive Styles Object
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     fontFamily: '"Inter", "Segoe UI", Roboto, -apple-system, sans-serif',
     minHeight: "100vh",
-    padding: "24px 32px",
+    padding: "24px 4%", // Dynamic side padding for small screens
+    maxWidth: "100vw", // Hard lock page width
+    overflowX: "hidden", // Prevent full-page side scrolling entirely
+    boxSizing: "border-box",
     transition: "background 0.3s ease",
   },
   header: {
@@ -1793,14 +1796,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 600,
     fontSize: "14px",
     cursor: "pointer",
-    transition: "all 0.25s ease",
+    transition: "all 0.2s ease",
     boxShadow: "0 4px 14px rgba(4, 120, 87, 0.3)",
   },
   kpiGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", 
     gap: "14px",
     marginBottom: "30px",
+    width: "100%",
   },
   kpiCard: {
     background: "rgba(255, 255, 255, 0.95)",
@@ -1808,23 +1812,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: "20px 22px",
     borderRadius: "16px",
     border: "1px solid #bbf7d0",
-    boxShadow: "0 4px 16px rgba(2, 44, 34, 0.08)",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: "0 4px 166px rgba(2, 44, 34, 0.08)",
     position: "relative",
     overflow: "hidden",
-  },
-  kpiCardHover: {
-    transform: "translateY(-4px)",
-    boxShadow: "0 12px 32px rgba(2, 44, 34, 0.15)",
-    borderColor: "#10b981",
-  },
-  kpiAccent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "3px",
-    background: `linear-gradient(90deg, #10b981 0%, #34d399 100%)`,
   },
   kpiLabel: {
     color: "#065f46",
@@ -1851,12 +1841,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   chartCard: {
     background: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(8px)",
-    padding: "24px",
+    padding: "clamp(16px, 3vw, 24px)", 
     borderRadius: "18px",
     border: "1px solid #bbf7d0",
+    boxSizing: "border-box",
     boxShadow: "0 4px 20px rgba(2, 44, 34, 0.08)",
     marginBottom: "24px",
-    transition: "transform 0.3s ease, box-shadow 0.3s ease",
+    width: "100%",
+    overflow: "hidden", 
   },
   chartHeader: {
     display: "flex",
@@ -1882,15 +1874,26 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   grid2Col: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", 
     gap: "24px",
     marginBottom: "24px",
+    width: "100%",
+  },
+  scrollableChartWrapper: {
+    width: "100%",
+    overflowX: "auto",
+    overflowY: "hidden",
+    WebkitOverflowScrolling: "touch", 
+    scrollbarWidth: "thin", 
+    scrollbarColor: "#047857 transparent",
+    paddingBottom: "12px",
   },
   exportCard: {
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: "12px",
+    flexWrap: "wrap", 
   },
   exportBtn: {
     display: "flex",
