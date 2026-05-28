@@ -1,0 +1,7 @@
+INFO 2026-05-27 15:32:47,650 autoreload Watching for file changes with StatReloader
+INFO 2026-05-27 15:36:13,727 autoreload Watching for file changes with StatReloader
+INFO 2026-05-27 15:37:01,772 autoreload Watching for file changes with StatReloader
+INFO 2026-05-28 04:25:28,544 autoreload Watching for file changes with StatReloader
+INFO 2026-05-28 05:30:50,587 sync_service GOKOLLECT SYNC COMPLETE | Created: 100 | Skipped: 100
+INFO 2026-05-28 08:15:48,731 sync_service GOKOLLECT SYNC COMPLETE | Created: 1 | Skipped: 99
+INFO 2026-05-28 09:49:43,282 sync_service GOKOLLECT SYNC COMPLETE | Created: 14929 | Skipped: 6087

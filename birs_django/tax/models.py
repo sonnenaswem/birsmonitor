@@ -8,6 +8,14 @@ from django.db.models import Q
 from users.models import CustomUser
 User = get_user_model()
 
+RECONCILIATION_STATUS = (
+    ("pending", "Pending"),
+    ("matched", "Matched"),
+    ("amount_mismatch", "Amount Mismatch"),
+    ("missing_softnet", "Missing Softnet"),
+    ("duplicate", "Duplicate"),
+    ("failed", "Failed"),
+)
 
 class TaxEntry(models.Model):
     user = models.ForeignKey(
@@ -24,21 +32,103 @@ class TaxEntry(models.Model):
     remita_verified = models.BooleanField(default=False)
     interswitch_verified = models.BooleanField(default=False)
     gokollect_verified = models.BooleanField(default=False)
-    remita_amount = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
-    interswitch_amount = models.DecimalField(max_digits=25, decimal_places=2, null=True, blank=True)
-    gokollect_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    remita_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    interswitch_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
+    gokollect_amount = models.DecimalField(max_digits=25, decimal_places=2, default=0)
+    gross_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    birs_split_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    institution_split_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    novus_split_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    tagkonsult_split_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
     area_office = models.CharField(max_length=100, db_index=True)
     taxpayer_name = models.CharField(max_length=255, null=True, blank=True)
     date_of_remittance = models.DateField(null=True, blank=True)
     vehicle_type = models.CharField(max_length=100, null=True, blank=True)
     registration_number = models.CharField(max_length=100, null=True, blank=True)
     total_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0.00, editable=False)
+    payment_status = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
     source = models.CharField(
         max_length=20,
         choices=[('POS', 'POS'), ('Manual', 'Manual')],
         default='Manual'
-    )  
+    )
+    pos_terminal = models.ForeignKey(
+        "PosTerminal",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tax_entries"
+    )
+    # SOFTNET RECONCILIATION
+    softnet_verified = models.BooleanField(default=False)
+    softnet_verified_at = models.DateTimeField(null=True, blank=True)
+
+    softnet_status = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    softnet_reference = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    softnet_data = models.JSONField(
+        default=dict,
+        blank=True
+    )
+
+    reconciliation_status = models.CharField(
+        max_length=50,
+        choices=RECONCILIATION_STATUS,
+        default="pending"
+    )
+
+    reconciliation_notes = models.TextField(
+        blank=True,
+        null=True
+    )
     data = models.JSONField(null=True, blank=True)
+    external_source = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
 
     date_uploaded = models.DateTimeField(auto_now_add=True)
     month = models.IntegerField()
@@ -61,6 +151,11 @@ class TaxEntry(models.Model):
                 condition=Q(gokollect__isnull=False),
                 name="unique_gokollect_when_present"
             ),
+            models.UniqueConstraint(
+                fields=["softnet_reference"],
+                condition=Q(softnet_reference__isnull=False),
+                name="unique_softnet_reference_when_present"
+            ),
         ]
         indexes = [
             models.Index(fields=["month", "year"]),
@@ -68,6 +163,11 @@ class TaxEntry(models.Model):
             models.Index(fields=["date_of_remittance"]),
             models.Index(fields=["source"]),
             models.Index(fields=["tax_item"]),
+            models.Index(fields=["gokollect"]),
+            models.Index(fields=["remita"]),
+            models.Index(fields=["interswitch_ref"]),
+            models.Index(fields=["softnet_reference"]),
+            models.Index(fields=["reconciliation_status"]),
         ]
 
     def save(self, *args, **kwargs):
@@ -97,18 +197,48 @@ class MonthlyLeagueSnapshot(models.Model):
     
 
 class PosTerminal(models.Model):
-    terminal_id = models.CharField(max_length=100, unique=True)
+    terminal_id = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True
+    )
     ato = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="pos_terminals")
     station_name = models.CharField(max_length=255, blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    CHANNEL_CHOICES = [
+        ("softnet", "Softnet"),
+        ("gokollect", "Gokollect"),
+    ]
 
+    channel = models.CharField(
+        max_length=20,
+        choices=CHANNEL_CHOICES,
+        default="softnet"
+    )
+    branch_name = models.CharField(max_length=255, blank=True, null=True)
+    provider = models.CharField(max_length=100, blank=True, null=True)
+    softnet_ato_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True
+    )
+
+    softnet_ato_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        if self.ato.role != "ato":
+        if not self.ato or self.ato.role != "ato":
             raise ValidationError("Only ATO users can be assigned POS terminals.")
     
     def save(self, *args, **kwargs):
+        if self.terminal_id:
+            self.terminal_id = self.terminal_id.strip().upper()
+
         self.full_clean()
         super().save(*args, **kwargs)
     
@@ -133,3 +263,69 @@ class AuditLog(models.Model):
     def __str__(self):
         return f"{self.performed_by.username} modified {self.tax_entry.id}"
 
+
+class GokollectInstitutionMapping(models.Model):
+    institution_name = models.CharField(
+        max_length=255,
+        unique=True
+    )
+
+    institution_code = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+    ato = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="gokollect_institutions"
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        if self.ato.role != "ato":
+            raise ValidationError(
+                "Only ATO users can be mapped."
+            )
+        
+    def save(self, *args, **kwargs):
+        if self.institution_name:
+            self.institution_name = (
+                self.institution_name.strip().upper()
+            )
+
+        if self.institution_code:
+            self.institution_code = (
+                self.institution_code.strip().upper()
+            )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.institution_name} -> {self.ato.username}"
+
+
+class ExternalSyncLog(models.Model):
+    provider = models.CharField(max_length=50)
+    terminal_id = models.CharField(max_length=100)
+
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+
+    last_reference = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        default="success"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.provider} - {self.terminal_id}"

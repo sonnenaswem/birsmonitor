@@ -17,6 +17,7 @@ const fieldMap: Record<string, string[]> = {
   FSC: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   Produce: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   Toxic_Emmision: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  Income_Rate: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   "Vehicle License": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   "Hackney Permit": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
   "Road Worthiness": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
@@ -174,6 +175,7 @@ export default function EnterTaxDataPage() {
               <option value="FSC">Fire Service Charge</option>
               <option value="Produce">Produce</option>
               <option value="Toxic_Emmision">Toxic Emmision</option>
+              <option value="Income_Rate">Income Rate</option>
             </select>
           </div>
 

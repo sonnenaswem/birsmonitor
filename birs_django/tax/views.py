@@ -1,4 +1,5 @@
 import calendar
+import logging
 from rest_framework import viewsets, status, permissions, generics
 from .models import TaxEntry, MonthlyLeagueSnapshot, PosTerminal
 from users.models import CustomUser
@@ -9,7 +10,8 @@ from django.shortcuts import get_object_or_404
 from .serializers import TaxEntrySerializer
 from performance.models import PerformanceTarget
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.conf import settings
 from django.db.models import Sum, DecimalField, Value
 from django.utils import timezone 
 from rest_framework import serializers
@@ -19,9 +21,14 @@ from .serializers import (
     TaxEntrySerializer,
    
 )
+from django.conf import settings
+from tax.tasks import process_softnet_webhook_task
 from birs_django.utils.date_utils  import get_current_period
 from rest_framework.pagination import PageNumberPagination
 from datetime import datetime
+
+
+logger = logging.getLogger(__name__)
 
 class TaxEntryPagination(PageNumberPagination):
     page_size = 15
@@ -200,111 +207,82 @@ class AllEntriesListView(APIView):
     
 
 @api_view(["POST"])
-@permission_classes([])  # Awaiting Endpoint from softnet, signature/API key validation
+@permission_classes([AllowAny])
 def softnet_webhook(request):
-    """
-    Handles verified Remita/Interswitch transactions from Softnet.
-    Creates TaxEntry automatically.
-    Prevents duplicate references.
-    """
 
-    channel = request.data.get("channel")  # remita | interswitch
-    reference = request.data.get("reference")
-    amount = request.data.get("amount")
-    taxpayer_name = request.data.get("taxpayer_name")
-    tax_item = request.data.get("tax_item")
-    payment_date = request.data.get("payment_date")
-    officer_id = request.data.get("officer_id")  # optional
-    area_office = request.data.get("area_office")
+    client_id = request.headers.get(
+        "clientId"
+    )
 
-    if not channel:
-        return Response(
-            {"error": "Channel is required."},
-            status=400
+    if client_id != settings.SOFTNET_CLIENT_ID:
+
+        logger.warning(
+            "Unauthorized Softnet webhook"
         )
 
-    if not reference:
         return Response(
-            {"error": "Reference is required."},
-            status=400
+            {"error": "Unauthorized"},
+            status=401
         )
 
-    if not amount:
-        return Response(
-            {"error": "Amount is required."},
-            status=400
+    payload = request.data
+
+    try:
+
+        process_softnet_webhook_task.delay(
+            payload
         )
 
-    # Optional ATO resolution
-    officer = None
-    if officer_id:
-        officer = CustomUser.objects.filter(id=officer_id).first()
-
-    # Duplicate protection
-    if channel.lower() == "remita":
-        if TaxEntry.objects.filter(remita=reference).exists():
-            return Response({"status": "duplicate_ignored"})
-
-    elif channel.lower() == "interswitch":
-        if TaxEntry.objects.filter(interswitch_ref=reference).exists():
-            return Response({"status": "duplicate_ignored"})
-
-    else:
-        return Response(
-            {"error": "Unsupported payment channel."},
-            status=400
+        logger.info(
+            "Softnet webhook accepted"
         )
 
-    # Build payload
-    payment_dt = datetime.strptime(payment_date, "%Y-%m-%d")
+        return Response(
+            {
+                "success": True,
+                "message": "Webhook received"
+            },
+            status=200
+        )
 
-    payload = {
-        "user": officer,
-        "tax_item": tax_item,
-        "subhead": tax_item,
-        "taxpayer_name": taxpayer_name,
-        "date_of_remittance": payment_date,
-        "month": payment_dt.month,
-        "year": payment_dt.year,
-        "area_office": area_office or "",
-        "source": "POS",
-    }
+    except Exception as e:
 
-    # Channel-specific mapping
-    if channel.lower() == "remita":
-        payload["remita"] = reference
-        payload["remita_amount"] = amount
-        payload["remita_verified"] = True
+        logger.exception(
+            f"Webhook processing failed: {str(e)}"
+        )
 
-    elif channel.lower() == "interswitch":
-        payload["interswitch_ref"] = reference
-        payload["interswitch_amount"] = amount
-        payload["interswitch_verified"] = True
-
-    entry = TaxEntry.objects.create(**payload)
-
-    return Response({
-        "status": "success",
-        "entry_id": entry.id,
-        "channel": channel.title(),
-        "reference": reference
-    })
+        return Response(
+            {
+                "success": False,
+                "message": str(e)
+            },
+            status=500
+        )
 
 
 @api_view(["POST"])
 @permission_classes([])  # Secure later with signature validation
 def gokollect_webhook(request):
-    collector_code = request.data.get("collector_code")
+    collector_code = (
+        request.data.get("collector_code")
+        or request.data.get("agent_code")
+        or request.data.get("merchant_code")
+    )
     reference = request.data.get("reference")
     amount = request.data.get("amount")
     taxpayer_name = request.data.get("taxpayer_name")
     tax_item = request.data.get("tax_item")
+    terminal_id = request.data.get("terminal_id")
     payment_date = request.data.get("payment_date")
 
-    # Validate required fields
-    if not collector_code:
+    # Require at least one routing identifier
+    if not collector_code and not terminal_id:
         return Response(
-            {"error": "collector_code is required"},
+            {
+                "error": (
+                    "collector_code or terminal_id is required"
+                )
+            },
             status=400
         )
 
@@ -315,17 +293,36 @@ def gokollect_webhook(request):
         )
 
     # Normalize collector code
-    collector_code = collector_code.strip().upper()
+    if collector_code:
+        collector_code = collector_code.strip().upper()
 
-    # Route payment to ATO using Gokollect code
-    ato = CustomUser.objects.filter(
-        gokollect_code=collector_code,
-        role="ato"
-    ).first()
+    # Attempt terminal resolution first
+    terminal = None
+
+    if terminal_id:
+        terminal = PosTerminal.objects.filter(
+            terminal_id=terminal_id.strip().upper(),
+            is_active=True
+        ).select_related("ato").first()
+
+    ato = None
+
+    # Priority 1: Terminal mapping
+    if terminal:
+        ato = terminal.ato
+
+    # Priority 2: Collector code mapping
+    elif collector_code:
+        ato = CustomUser.objects.filter(
+            gokollect_code=collector_code,
+            role="ato"
+        ).first()
 
     if not ato:
         return Response(
-            {"error": f"No ATO mapped to collector code {collector_code}"},
+            {
+                "error": "Unable to resolve ATO from terminal or collector code"
+            },
             status=404
         )
 
@@ -345,6 +342,7 @@ def gokollect_webhook(request):
     # Create tax entry
     TaxEntry.objects.create(
         user=ato,
+        pos_terminal=terminal,
         area_office=ato.area_office,
         tax_item=tax_item,
         taxpayer_name=taxpayer_name,
@@ -353,7 +351,8 @@ def gokollect_webhook(request):
         year=payment_dt.year,
         gokollect=reference,
         gokollect_amount=amount,
-        source="POS"
+        source="POS",
+        data=request.data
     )
 
     return Response({

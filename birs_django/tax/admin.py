@@ -3,6 +3,7 @@ from .models import (
     TaxEntry,
     MonthlyLeagueSnapshot,
     PosTerminal,
+    GokollectInstitutionMapping,
     AuditLog,
 )
 
@@ -46,22 +47,51 @@ class MonthlyLeagueSnapshotAdmin(admin.ModelAdmin):
     ordering = ("-year", "-month")
 
 
+@admin.register(GokollectInstitutionMapping)
+class GokollectInstitutionMappingAdmin(admin.ModelAdmin):
+    list_display = (
+        "institution_name",
+        "institution_code",
+        "ato",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "is_active",
+    )
+
+    search_fields = (
+        "institution_name",
+        "institution_code",
+        "ato__username",
+    )
+
+
 @admin.register(PosTerminal)
 class PosTerminalAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "terminal_id",
         "ato",
+        "channel",
+        "provider",
+        "branch_name",
         "station_name",
         "is_active",
         "created_at",
     )
     list_filter = (
         "is_active",
+        "channel",
+        "provider",
     )
+
     search_fields = (
         "terminal_id",
         "ato__username",
+        "branch_name",
+        "provider",
     )
 
 

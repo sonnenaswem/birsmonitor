@@ -67,6 +67,10 @@ class TaxEntrySerializer(serializers.ModelSerializer):
     
 
     def update(self, instance, validated_data):
+        if instance.source == "POS":
+            raise serializers.ValidationError(
+                "POS transactions cannot be modified."
+            )
         user = self.context['request'].user
         changes = {}
 

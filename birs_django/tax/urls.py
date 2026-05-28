@@ -11,6 +11,7 @@ from .views import (
     gokollect_webhook,
     tax_item_aggregate,
 )
+from tax.views import softnet_webhook
 
 router = DefaultRouter()
 router.register(r"entries", TaxEntryViewSet, basename="tax-entry")
@@ -35,7 +36,11 @@ urlpatterns = [
     path("ato/<int:ato_id>/breakdown/", ATOItemBreakdownView.as_view(), name="ato-item-breakdown"),
 
     # Webhooks
-    path("webhooks/softnet/", softnet_webhook, name="softnet-webhook"),
+    path(
+        "softnet/webhook/",
+        softnet_webhook,
+        name="softnet-webhook",
+    ),
     path("webhooks/gokollect/", gokollect_webhook, name="gokollect-webhook"),
 ]
 
