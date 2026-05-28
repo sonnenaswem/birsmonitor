@@ -15,6 +15,7 @@ import environ
 import os
 from corsheaders.defaults import default_headers
 from datetime import timedelta
+from celery.schedules import crontab
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -36,7 +37,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
-    "127.0.0.1,localhost,.onrender.com,.railway.app"
+    "127.0.0.1,localhost,birsmonitor.net.ng,www.birsmonitor.net.ng"
 ).split(",")
 
 # Application definition
@@ -57,6 +58,7 @@ INSTALLED_APPS = [
     "corsheaders",
     'performance',
     'rest_framework_simplejwt.token_blacklist',
+    'django_celery_beat',
 ]
 
 TEMPLATES = [
@@ -83,9 +85,9 @@ DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL"),
         conn_max_age=600,
-        ssl_require=True
     )
 }
+
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
@@ -119,8 +121,52 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = env(
+    "CELERY_BROKER_URL",
+    default="redis://127.0.0.1:6379/0"
+)
+
+CELERY_RESULT_BACKEND = env(
+    "CELERY_RESULT_BACKEND",
+    default="redis://127.0.0.1:6379/0"
+)
+
+CELERY_ACCEPT_CONTENT = ["json"]
+
+CELERY_TASK_SERIALIZER = "json"
+
+CELERY_RESULT_SERIALIZER = "json"
+
+CELERY_TIMEZONE = "Africa/Lagos"
+
+CELERY_TASK_ACKS_LATE = True
+
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+CELERY_TASK_TIME_LIMIT = 300
+
+CELERY_TASK_SOFT_TIME_LIMIT = 240
+
+CELERY_BEAT_SCHEDULE = {
+
+    "sync-gokollect-every-10-minutes": {
+        "task": "tax.periodic_tasks.periodic_gokollect_sync",
+        "schedule": 600.0,
+    },
+
+    # "scan-pending-softnet-every-15-minutes": {
+    #     "task": "tax.periodic_tasks.reconcile_pending_softnet_transactions",
+    #     "schedule": 900.0,
+    # },
+
+    "detect-stale-transactions-nightly": {
+        "task": "tax.periodic_tasks.detect_stale_transactions",
+        "schedule": crontab(
+            hour=0,
+            minute=0
+        ),
+    },
+}
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -152,14 +198,15 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://birs-frontend-production.up.railway.app",
+    "https://birsmonitor.net.ng",
+    "https://www.birsmonitor.net.ng",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://birs-frontend-production.up.railway.app",
-    "https://birs-backend-production.up.railway.app",
+    "https://birsmonitor.net.ng",
+    "https://www.birsmonitor.net.ng",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -175,24 +222,76 @@ CACHES = {
 ROOT_URLCONF = 'birs_django.urls'
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "formatters": {
+        "verbose": {
+            "format": (
+                "{levelname} "
+                "{asctime} "
+                "{module} "
+                "{message}"
+            ),
+            "style": "{",
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
+
+    "handlers": {
+
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(
+                BASE_DIR / "logs" / "birs.log"
+            ),
+            
+            "formatter": "verbose",
+        },
+
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO",
+    },
+
+    "loggers": {
+
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        "tax": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
 
+SOFTNET_CLIENT_ID = env("SOFTNET_CLIENT_ID")
+
+SOFTNET_BASE_URL = env(
+    "SOFTNET_BASE_URL"
+)
+
+SOFTNET_TIMEOUT = env.int(
+    "SOFTNET_TIMEOUT",
+    default=60
+)
+
+GOKOLLECT_SECRET = env("GOKOLLECT_SECRET")
+GOKOLLECT_IDENTITY = env("GOKOLLECT_IDENTITY")
+GOKOLLECT_BASE_URL = env(
+    "GOKOLLECT_BASE_URL"
+)
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
@@ -200,3 +299,8 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+
+SECURE_PROXY_SSL_HEADER = (
+    "HTTP_X_FORWARDED_PROTO",
+    "https",
+)
