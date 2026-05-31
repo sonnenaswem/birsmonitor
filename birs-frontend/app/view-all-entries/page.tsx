@@ -88,7 +88,7 @@ export default function ViewAllEntries() {
           entry.user_full_name ||
           entry.area_office ||
           "Headquarters"
-      })).sort((a: any, b: any) => new Date(b.date_of_remittance).getTime() - new Date(a.date_of_remittance).getTime());
+      }));
       
 
       setEntries(normalized);

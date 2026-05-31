@@ -135,7 +135,10 @@ class AllEntriesListView(APIView):
                 date_of_remittance__range=[from_date, to_date]
             )
 
-        queryset = queryset.select_related("user").order_by("-date_uploaded")
+        queryset = queryset.select_related("user").order_by(
+            "-date_of_remittance",
+            "-id"
+        )
 
         # PAGINATION
         paginator = TaxEntryPagination()
@@ -210,18 +213,38 @@ class AllEntriesListView(APIView):
 @permission_classes([AllowAny])
 def softnet_webhook(request):
 
-    client_id = request.headers.get(
+    incoming_client_id = request.headers.get(
         "clientId"
     )
 
-    if client_id != settings.SOFTNET_CLIENT_ID:
+    expected_client_id = settings.SOFTNET_CLIENT_ID
+
+    if not incoming_client_id:
 
         logger.warning(
-            "Unauthorized Softnet webhook"
+            "Softnet webhook missing clientId header"
         )
 
         return Response(
-            {"error": "Unauthorized"},
+            {
+                "success": False,
+                "message": "Missing clientId header"
+            },
+            status=401
+        )
+
+    if incoming_client_id != expected_client_id:
+
+        logger.warning(
+            f"Unauthorized Softnet webhook attempt: "
+            f"{incoming_client_id}"
+        )
+
+        return Response(
+            {
+                "success": False,
+                "message": "Unauthorized webhook"
+            },
             status=401
         )
 
@@ -234,7 +257,7 @@ def softnet_webhook(request):
         )
 
         logger.info(
-            "Softnet webhook accepted"
+            "Softnet webhook accepted successfully"
         )
 
         return Response(
@@ -248,13 +271,13 @@ def softnet_webhook(request):
     except Exception as e:
 
         logger.exception(
-            f"Webhook processing failed: {str(e)}"
+            f"Softnet webhook processing failed: {str(e)}"
         )
 
         return Response(
             {
                 "success": False,
-                "message": str(e)
+                "message": "Webhook processing failed"
             },
             status=500
         )

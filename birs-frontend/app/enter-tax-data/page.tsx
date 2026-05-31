@@ -5,29 +5,30 @@ import api from "@/lib/axios";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const fieldMap: Record<string, string[]> = {
-  PAYE: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  WHT: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Dev_Levy: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Bus_Prem: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Penalty: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Interest: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  PIT: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Sch_Reg_Ren: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Sch_Maint_Fees: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  FSC: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Produce: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Toxic_Emmision: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  Income_Rate: ["Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Vehicle License": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Hackney Permit": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Road Worthiness": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Learner's Permit": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Plate Number": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "New Registration": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Vehicle Registration Booklet": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Proof of Ownership": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Change of Ownership Certificate": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
-  "Heavy Duty Permit": ["Vehicle Type", "Registration Number", "Taxpayer's Name", "Amount", "Date of Remittance", "Remita", "Interswitch"],
+  PAYE: ["Remita", "Interswitch"],
+  WHT: ["Remita", "Interswitch"],
+  Dev_Levy: ["Remita", "Interswitch"],
+  Bus_Prem: ["Remita", "Interswitch"],
+  Penalty: ["Remita", "Interswitch"],
+  Interest: ["Remita", "Interswitch"],
+  PIT: ["Remita", "Interswitch"],
+  Sch_Reg_Ren: ["Remita", "Interswitch"],
+  Sch_Maint_Fees: ["Remita", "Interswitch"],
+  FSC: ["Remita", "Interswitch"],
+  Produce: ["Remita", "Interswitch"],
+  Toxic_Emmision: ["Remita", "Interswitch"],
+  Income_Rate: ["Remita", "Interswitch"],
+
+  "Vehicle License": ["Remita", "Interswitch"],
+  "Hackney Permit": ["Remita", "Interswitch"],
+  "Road Worthiness": ["Remita", "Interswitch"],
+  "Learner's Permit": ["Remita", "Interswitch"],
+  "Plate Number": ["Remita", "Interswitch"],
+  "New Registration": ["Remita", "Interswitch"],
+  "Vehicle Registration Booklet": ["Remita", "Interswitch"],
+  "Proof of Ownership": ["Remita", "Interswitch"],
+  "Change of Ownership Certificate": ["Remita", "Interswitch"],
+  "Heavy Duty Permit": ["Remita", "Interswitch"],
 };
 
 export default function EnterTaxDataPage() {
@@ -37,10 +38,6 @@ export default function EnterTaxDataPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "", msg: "" });
 
-  useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    setFormData((prev) => ({ ...prev, date_of_remittance: today }));
-  }, []);
 
   const handleChange = (field: string, value: string) => {
     const key = field.replace(/\s+/g, "_").toLowerCase();
@@ -74,32 +71,25 @@ export default function EnterTaxDataPage() {
     try {
       // ✅ CLEAN PAYLOAD (THIS FIXES EVERYTHING)
       const payload = {
+        
         tax_item: taxItem,
         subhead: taxItem === "Road_Taxes" ? roadSubhead : taxItem,
 
-        taxpayer_name: formData["taxpayer's_name"] || "",
-        date_of_remittance: formData["date_of_remittance"] || null,
-        vehicle_type: formData["vehicle_type"] || null,
-        registration_number: formData["registration_number"] || null,
-
         remita: formData["remita"] || null,
         interswitch_ref: formData["interswitch"] || null,
-
-        remita_amount: hasRemita ? Number(formData["amount"]) : null,
-        interswitch_amount: hasInterswitch ? Number(formData["amount"]) : null,
       };
+      
 
       await api.post("/api/tax/entries/", payload);
 
       setStatus({
         type: "success",
-        msg: "Tax entry submitted successfully!",
+        msg: "Reference submitted successfully. Awaiting verification and reconciliation.",
       });
 
 
-      setFormData({
-        date_of_remittance: new Date().toISOString().slice(0, 10),
-      });
+      setFormData({});
+
       setTaxItem("");
       setRoadSubhead("");
     } catch (err: any) {

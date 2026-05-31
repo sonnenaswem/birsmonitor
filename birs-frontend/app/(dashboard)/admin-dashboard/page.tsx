@@ -250,25 +250,36 @@ export default function AdminDashboard() {
     })) || [],
   [analyticsData]);
 
-  const taxItemChartData = useMemo(() => 
-    (taxItemData || []).map((item: any, index: number) => ({
-      name: item.tax_item || item.name || item.item_name || "Unknown",
-      value: Number(
-        item.total ??
-        item.value ??
-        item.total_revenue ??
-        item.amount ??
-        item.revenue ??
-        0
-      ),
-      fill: [
-        colors.chart1, colors.chart2, colors.chart3, colors.accentLight, 
-        colors.chart4, colors.chart5, colors.accent, colors.primaryMid, 
-        colors.primary, colors.accentMuted
-      ][index % 10],
-      gradientId: `gradient-${index}`,
-    })), 
-  [taxItemData]);
+  const taxItemChartData = useMemo(
+    () =>
+      (taxItemData || [])
+        .map((item: any, index: number) => ({
+          name: item.tax_item || item.name || item.item_name || "Unknown",
+          value: Number(
+            item.total ??
+            item.value ??
+            item.total_revenue ??
+            item.amount ??
+            item.revenue ??
+            0
+          ),
+          fill: [
+            colors.chart1,
+            colors.chart2,
+            colors.chart3,
+            colors.accentLight,
+            colors.chart4,
+            colors.chart5,
+            colors.accent,
+            colors.primaryMid,
+            colors.primary,
+            colors.accentMuted,
+          ][index % 10],
+          gradientId: `gradient-${index}`,
+        }))
+        .sort((a, b) => b.value - a.value),
+    [taxItemData]
+  );
 
   // ✨ Custom Tooltip Component for Rich Formatting
   const CustomTooltip = ({ active, payload, label, formatter, suffix = "" }: any) => {
@@ -1377,7 +1388,17 @@ export default function AdminDashboard() {
                         tick={{ fill: colors.textMuted, fontSize: 11, fontWeight: 500 }}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(v) => v === 0 ? "0" : `₦${(v / 1000000).toFixed(1)}M`}
+                        tickFormatter={(v) => {
+                          if (v >= 1000000) {
+                            return `₦${(v / 1000000).toFixed(1)}M`;
+                          }
+
+                          if (v >= 1000) {
+                            return `₦${(v / 1000).toFixed(0)}K`;
+                          }
+
+                          return `₦${v}`;
+                        }}
                       />
                       
                       <Tooltip content={<CustomTooltip formatter={formatCurrency} />} />
@@ -1399,7 +1420,19 @@ export default function AdminDashboard() {
                             fontSize: 10, 
                             fontWeight: 700,
                           }}
-                          formatter={(v: any) => `₦${(v / 1000000).toFixed(1)}M`}
+                          formatter={(v: any) => {
+                            const value = Number(v || 0);
+
+                            if (value >= 1000000) {
+                              return `₦${(value / 1000000).toFixed(1)}M`;
+                            }
+
+                            if (value >= 1000) {
+                              return `₦${(value / 1000).toFixed(0)}K`;
+                            }
+
+                            return `₦${value.toLocaleString()}`;
+                          }}
                         />
                         {taxItemChartData.slice(0, 12).map((entry: any, index: number) => (
                           <Cell 

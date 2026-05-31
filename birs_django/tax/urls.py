@@ -11,7 +11,7 @@ from .views import (
     gokollect_webhook,
     tax_item_aggregate,
 )
-from tax.views import softnet_webhook
+
 
 router = DefaultRouter()
 router.register(r"entries", TaxEntryViewSet, basename="tax-entry")

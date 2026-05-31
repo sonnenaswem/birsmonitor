@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import TaxEntry, MonthlyLeagueSnapshot, AuditLog
-from datetime import date
+
 
 class TaxEntrySerializer(serializers.ModelSerializer):
     user_full_name = serializers.CharField(source='user.full_name', read_only=True)
@@ -16,39 +16,77 @@ class TaxEntrySerializer(serializers.ModelSerializer):
             'month', 'year', 'user_full_name', 'area_office', 'total_amount'
         ]
         # FIXED: Use underscore, not hyphen
-        read_only_fields = ('area_office', 'total_amount')
+        read_only_fields = (
+            'area_office',
+            'total_amount',
+            'taxpayer_name',
+            'date_of_remittance',
+            'vehicle_type',
+            'registration_number',
+            'remita_amount',
+            'interswitch_amount',
+            'gokollect_amount',
+            'remita_verified',
+            'interswitch_verified',
+            'gokollect_verified',
+        )
         extra_kwargs = {
             'month': {'required': False},
             'year': {'required': False},
         }
 
+    from datetime import date
+    from django.conf import settings
+
+
     def validate(self, attrs):
-        from birs_django.utils.date_utils import get_current_period
         from datetime import date
-        
+        from django.conf import settings
         today = date.today()
-        current_month, current_year = get_current_period()
-        month_name = today.strftime("%B %Y")
-        
-        # Check date_of_remittance if provided
+
         remittance_date = attrs.get("date_of_remittance")
-        if remittance_date:
-            if remittance_date.month != today.month or remittance_date.year != today.year:
-                raise serializers.ValidationError(
-                    {"date_of_remittance": f"You can only submit payments for {month_name}."}
-                )
-        
-        # Also validate month/year fields directly (in case date_of_remittance is not provided)
-        entry_month = attrs.get('month')
-        entry_year = attrs.get('year')
-        
-        if entry_month is not None and entry_year is not None:
-            if entry_month != current_month or entry_year != current_year:
-                raise serializers.ValidationError(
-                    {"month": f"You can only submit payments for {month_name}."}
-                )
-        
-        return attrs
+
+        if not remittance_date:
+            return attrs
+
+        grace_days = getattr(
+            settings,
+            "MONTH_SUBMISSION_GRACE_DAYS",
+            5
+        )
+
+        current_month = today.month
+        current_year = today.year
+
+        # PREVIOUS MONTH LOGIC
+        if current_month == 1:
+            previous_month = 12
+            previous_year = current_year - 1
+        else:
+            previous_month = current_month - 1
+            previous_year = current_year
+
+        # ALWAYS ALLOW CURRENT MONTH
+        if (
+            remittance_date.month == current_month
+            and remittance_date.year == current_year
+        ):
+            return attrs
+
+        # ALLOW PREVIOUS MONTH DURING GRACE WINDOW
+        if today.day <= grace_days:
+            if (
+                remittance_date.month == previous_month
+                and remittance_date.year == previous_year
+            ):
+                return attrs
+
+        raise serializers.ValidationError({
+            "date_of_remittance":
+                f"You can only submit current month payments "
+                f"or previous month payments within the first "
+                f"{grace_days} days of a new month."
+        })
     
     def get_channel(self, obj):
         if obj.remita:

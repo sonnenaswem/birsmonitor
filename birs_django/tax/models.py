@@ -17,6 +17,15 @@ RECONCILIATION_STATUS = (
     ("failed", "Failed"),
 )
 
+VERIFICATION_STATUS = [
+        ("pending", "Pending"),
+        ("processing", "Processing"),
+        ("verified", "Verified"),
+        ("failed", "Failed"),
+        ("mismatch", "Mismatch"),
+        ("duplicate", "Duplicate"),
+    ]
+
 class TaxEntry(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -110,6 +119,24 @@ class TaxEntry(models.Model):
 
     softnet_data = models.JSONField(
         default=dict,
+        blank=True
+    )
+
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VERIFICATION_STATUS,
+        default="pending"
+    )
+
+    verification_attempts = models.IntegerField(default=0)
+
+    last_verification_attempt = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    verified_at = models.DateTimeField(
+        null=True,
         blank=True
     )
 
