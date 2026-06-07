@@ -11,6 +11,22 @@ export default function LeagueTablePage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const router = useRouter();
+  const currentMonthLabel = new Date().toLocaleString("default", { month: "long", year: "numeric" });
+
+  const formatLabelDate = (value: string) =>
+    new Date(value).toLocaleDateString("default", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  const currentLabel = fromDate || toDate
+    ? fromDate && toDate
+      ? `Filtered: ${formatLabelDate(fromDate)} — ${formatLabelDate(toDate)}`
+      : fromDate
+      ? `Filtered from ${formatLabelDate(fromDate)}`
+      : `Filtered up to ${formatLabelDate(toDate)}`
+    : `Current month: ${currentMonthLabel}`;
 
   const fetchData = async () => {
     try {
@@ -115,6 +131,21 @@ export default function LeagueTablePage() {
           <p style={{ margin: "5px 0 0 0", opacity: 0.8, fontSize: "14px" }}>
             Monthly performance ranking of all Area Tax Offices
           </p>
+          <div style={{
+            marginTop: "14px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "#ecfdf5",
+            color: "#065f46",
+            padding: "8px 14px",
+            borderRadius: "999px",
+            fontSize: "13px",
+            fontWeight: 700,
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+          }}>
+            {currentLabel}
+          </div>
         </div>
 
         {/* 🔥 NEW FILTER UI */}

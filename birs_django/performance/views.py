@@ -44,8 +44,8 @@ def performance_summary(request):
     pos_totals = TaxEntry.objects.filter(
         source="POS",
         user=user,
-        date_uploaded__month=month,
-        date_uploaded__year=year
+        month=month,
+        year=year
     ).aggregate(
         remita=Sum('remita_amount'),
         interswitch=Sum('interswitch_amount'),
@@ -56,7 +56,7 @@ def performance_summary(request):
 
 
     # Manual subtotal
-    manual_totals = TaxEntry.objects.filter(source="Manual", user=user, date_uploaded__month=month, date_uploaded__year=year).aggregate(
+    manual_totals = TaxEntry.objects.filter(source="Manual", user=user, month=month, year=year).aggregate(
         remita=Sum('remita_amount'),
         interswitch=Sum('interswitch_amount'),
         gokollect=Sum('gokollect_amount')
@@ -70,7 +70,7 @@ def performance_summary(request):
     # Monthly chart data
     monthly_data = (
         TaxEntry.objects.filter(user=user)
-        .values('month')
+        .values('year', 'month')
         .annotate(
             pos_total=Sum(
                 Case(
@@ -111,7 +111,7 @@ def performance_summary(request):
                 )
             )
         )
-        .order_by('month')
+        .order_by('year', 'month')
 
     )
 
@@ -182,14 +182,32 @@ def generate_monthly_snapshot(request):
     snapshot_data = []
 
     for ato in atos:
-        payments = Payment.objects.filter(
+        entries = TaxEntry.objects.filter(
             user=ato,
-            status="verified",
-            payment_date__month=month,
-            payment_date__year=year
+            date_of_remittance__month=month,
+            date_of_remittance__year=year
         )
 
-        total = payments.aggregate(Sum("amount"))["amount__sum"] or 0
+        totals = entries.aggregate(
+            remita=Coalesce(
+                Sum("remita_amount"),
+                Value(0, output_field=DecimalField())
+            ),
+            interswitch=Coalesce(
+                Sum("interswitch_amount"),
+                Value(0, output_field=DecimalField())
+            ),
+            gokollect=Coalesce(
+                Sum("gokollect_amount"),
+                Value(0, output_field=DecimalField())
+            )
+        )
+
+        total = (
+            totals["remita"] +
+            totals["interswitch"] +
+            totals["gokollect"]
+        )
 
         target = PerformanceTarget.objects.filter(
             user=ato,
@@ -277,16 +295,16 @@ def league_table(request):
         )
     elif month and year:
         entries = entries.filter(
-            date_uploaded__month=month,
-            date_uploaded__year=year
+            date_of_remittance__month=month,
+            date_of_remittance__year=year
         )
     else:
         now = timezone.now()
         month = now.month
         year = now.year
         entries = entries.filter(
-            date_uploaded__month=month,
-            date_uploaded__year=year
+            date_of_remittance__month=month,
+            date_of_remittance__year=year
         )
 
     atos = (
@@ -476,12 +494,30 @@ def admin_dashboard(request):
             # Get all ATOs
             atos = CustomUser.objects.filter(role="ato")
 
-            total_target = float(
-                PerformanceTarget.objects.filter(
+            target_queryset = PerformanceTarget.objects.all()
+
+            if from_date and to_date:
+                f_dt = datetime.strptime(from_date, "%Y-%m-%d")
+                t_dt = datetime.strptime(to_date, "%Y-%m-%d")
+
+                target_queryset = target_queryset.filter(
+                    Q(year__gt=f_dt.year, year__lt=t_dt.year) |
+                    Q(year=f_dt.year, month__gte=f_dt.month) |
+                    Q(year=t_dt.year, month__lte=t_dt.month)
+                )
+            else:
+                target_queryset = target_queryset.filter(
                     month=month,
                     year=year
-                ).aggregate(
-                    total=Coalesce(Sum("target_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField())
+                )
+
+            total_target = float(
+                target_queryset.aggregate(
+                    total=Coalesce(
+                        Sum("target_amount"),
+                        Value(0, output_field=DecimalField()),
+                        output_field=DecimalField()
+                    )
                 )["total"]
             )
             ato_revenue = (
@@ -494,10 +530,41 @@ def admin_dashboard(request):
                 )
             )
 
-            target_map = {
-                t.user_id: float(t.target_amount)
-                for t in PerformanceTarget.objects.filter(month=month, year=year)
-            }
+            target_queryset = PerformanceTarget.objects.all()
+
+            if from_date and to_date:
+                f_dt = datetime.strptime(from_date, "%Y-%m-%d")
+                t_dt = datetime.strptime(to_date, "%Y-%m-%d")
+
+                target_rows = (
+                    target_queryset.filter(
+                        Q(year__gt=f_dt.year, year__lt=t_dt.year) |
+                        Q(year=f_dt.year, month__gte=f_dt.month) |
+                        Q(year=t_dt.year, month__lte=t_dt.month)
+                    )
+                    .values("user")
+                    .annotate(
+                        total_target=Coalesce(
+                            Sum("target_amount"),
+                            Value(0, output_field=DecimalField()),
+                            output_field=DecimalField()
+                        )
+                    )
+                )
+
+                target_map = {
+                    row["user"]: float(row["total_target"])
+                    for row in target_rows
+                }
+
+            else:
+                target_map = {
+                    t.user_id: float(t.target_amount)
+                    for t in PerformanceTarget.objects.filter(
+                        month=month,
+                        year=year
+                    )
+                }
 
             revenue_map = {
                 item["user"]: item
@@ -572,7 +639,11 @@ def admin_dashboard(request):
 
             chart_data = (
                 entries
-                .filter(date_uploaded__isnull=False)
+
+                
+
+                .filter(date_of_remittance__isnull=False)
+
                 .annotate(trunc_month=TruncMonth("date_of_remittance"))
                 .values("trunc_month")
                 .annotate(
@@ -615,7 +686,10 @@ def admin_dashboard(request):
         )
         chart_data = (
             entries
-            .filter(date_uploaded__isnull=False)
+            
+
+            .filter(date_of_remittance__isnull=False)
+
             .annotate(trunc_month=TruncMonth("date_of_remittance"))
             .values("trunc_month")
             .annotate(
@@ -639,21 +713,6 @@ def admin_dashboard(request):
             Coalesce(Sum('gokollect_amount'), Value(0, output_field=DecimalField()), output_field=DecimalField())
         )['total']
 
-        # Always calculate monthly trend from all historical data (unfiltered)
-        all_entries = TaxEntry.objects.all()
-        monthly_trend = (
-            all_entries
-            .filter(date_uploaded__isnull=False)
-            .annotate(trunc_month=TruncMonth("date_of_remittance"))
-            .values("trunc_month")
-            .annotate(
-                total=
-                Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-                Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-                Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField())
-            )
-            .order_by("trunc_month")
-        )
 
         # If it's the first day of the month and no custom date filter, set chart_data to empty
         if is_first_day_of_month and not (from_date and to_date):
@@ -661,7 +720,11 @@ def admin_dashboard(request):
         else:
             chart_data = (
                 entries
-                .filter(date_uploaded__isnull=False)
+
+               
+
+                .filter(date_of_remittance__isnull=False)
+
                 .annotate(trunc_month=TruncMonth("date_of_remittance"))
                 .values("trunc_month")
                 .annotate(
@@ -685,7 +748,10 @@ def admin_dashboard(request):
             },
             "all_officers": ranked,
             "top5": ranked[:5],
-            "bottom5": ranked[-5:] if len(ranked) >= 5 else ranked,
+            "bottom5": sorted(
+                ranked,
+                key=lambda x: x["percent"]
+            )[:5],
             "risky": [a for a in ranked if len(a["flags"]) > 0],
             "monthly_trend": [
                 {
@@ -745,28 +811,3 @@ def export_revenue_csv(request):
     return response
 
 
-
-#   future firestore view
-# def export_revenue_csv(request):
-#     # 1. Standard Setup
-#     response = HttpResponse(content_type='text/csv')
-#     response['Content-Disposition'] = 'attachment; filename="firestore_revenue_report.csv"'
-#     writer = csv.writer(response)
-#     writer.writerow(['Date', 'Amount', 'Source', 'Status']) # Headers
-
-#     # 2. Connect to Firestore
-#     db = firestore.Client()
-    
-#     # 3. Fetch the Collection (e.g., your 'payments' collection)
-#     # You can even add .where() filters here later!
-#     docs = db.collection('payments').stream()
-
-#     # 4. The Loop (This is the "Firestore Ready" part)
-#     for doc in docs:
-#         data = doc.to_dict()
-#         writer.writerow([
-#             data.get('created_at'), 
-#             data.get('amount'), 
-#             data.get('source'), 
-#             data.get('status')
-#         ])
