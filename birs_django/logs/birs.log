@@ -5,3 +5,22 @@ INFO 2026-05-28 04:25:28,544 autoreload Watching for file changes with StatReloa
 INFO 2026-05-28 05:30:50,587 sync_service GOKOLLECT SYNC COMPLETE | Created: 100 | Skipped: 100
 INFO 2026-05-28 08:15:48,731 sync_service GOKOLLECT SYNC COMPLETE | Created: 1 | Skipped: 99
 INFO 2026-05-28 09:49:43,282 sync_service GOKOLLECT SYNC COMPLETE | Created: 14929 | Skipped: 6087
+INFO 2026-05-31 19:39:02,694 autoreload Watching for file changes with StatReloader
+INFO 2026-05-31 20:26:19,538 autoreload C:\Users\user\Desktop\BIRS\birs_django\tax\views.py changed, reloading.
+INFO 2026-05-31 20:26:22,526 autoreload Watching for file changes with StatReloader
+INFO 2026-06-01 02:38:35,132 autoreload Watching for file changes with StatReloader
+INFO 2026-06-01 20:53:07,308 autoreload C:\Users\user\Desktop\BIRS\birs_django\performance\views.py changed, reloading.
+INFO 2026-06-01 20:53:18,393 autoreload Watching for file changes with StatReloader
+INFO 2026-06-06 12:46:04,008 autoreload Watching for file changes with StatReloader
+INFO 2026-06-06 13:21:51,902 autoreload C:\Users\user\Desktop\BIRS\birs_django\tax\urls.py changed, reloading.
+INFO 2026-06-06 13:21:54,296 autoreload Watching for file changes with StatReloader
+INFO 2026-06-07 00:54:46,978 autoreload C:\Users\user\Desktop\BIRS\birs_django\performance\views.py changed, reloading.
+INFO 2026-06-07 00:54:56,016 autoreload Watching for file changes with StatReloader
+INFO 2026-06-07 01:31:25,841 autoreload C:\Users\user\Desktop\BIRS\birs_django\tax\services\reconciliation_service.py changed, reloading.
+INFO 2026-06-07 01:31:28,417 autoreload Watching for file changes with StatReloader
+INFO 2026-06-07 02:16:38,565 autoreload C:\Users\user\Desktop\BIRS\birs_django\tax\services\reconciliation_service.py changed, reloading.
+INFO 2026-06-07 02:16:40,999 autoreload Watching for file changes with StatReloader
+INFO 2026-06-07 02:16:49,161 autoreload C:\Users\user\Desktop\BIRS\birs_django\tax\views.py changed, reloading.
+INFO 2026-06-07 02:16:50,910 autoreload Watching for file changes with StatReloader
+INFO 2026-06-07 02:21:18,124 autoreload C:\Users\user\Desktop\BIRS\birs_django\tax\views.py changed, reloading.
+INFO 2026-06-07 02:21:19,880 autoreload Watching for file changes with StatReloader

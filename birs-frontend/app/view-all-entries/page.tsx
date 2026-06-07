@@ -50,6 +50,12 @@ export default function ViewAllEntries() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const parseEntryTimestamp = (value?: string | null) => {
+    if (!value) return -Infinity;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : -Infinity;
+  };
+
   useEffect(() => {
     setUserRole(localStorage.getItem("role"));
     fetchEntries();
@@ -65,31 +71,34 @@ export default function ViewAllEntries() {
       }
       const res = await api.get(url);
       setTotalPages(Math.ceil(res.data.count / 15));
-      const normalized: TaxEntry[] = res.data.results.map((entry: TaxEntry) => ({
-        ...entry,
-        display_reference:
-          entry.display_reference ||
-          entry.remita ||
-          entry.interswitch_ref ||
-          entry.gokollect ||
-          "N/A",
+      const normalized: TaxEntry[] = res.data.results
+        .map((entry: TaxEntry) => ({
+          ...entry,
+          display_reference:
+            entry.display_reference ||
+            entry.remita ||
+            entry.interswitch_ref ||
+            entry.gokollect ||
+            "N/A",
 
-        display_amount: Number(
-          entry.display_amount ??
-          entry.remita_amount ??
-          entry.interswitch_amount ??
-          entry.gokollect_amount ??
-          entry.total_amount ??
-          0
-        ),
+          display_amount: Number(
+            entry.display_amount ??
+            entry.remita_amount ??
+            entry.interswitch_amount ??
+            entry.gokollect_amount ??
+            entry.total_amount ??
+            0
+          ),
 
-        station_name:
-          entry.station_name ||
-          entry.user_full_name ||
-          entry.area_office ||
-          "Headquarters"
-      }));
-      
+          station_name:
+            entry.station_name ||
+            entry.user_full_name ||
+            entry.area_office ||
+            "Headquarters"
+        }))
+        .sort((a: TaxEntry, b: TaxEntry) => {
+          return parseEntryTimestamp(b.date_of_remittance) - parseEntryTimestamp(a.date_of_remittance);
+        });
 
       setEntries(normalized);
     } catch (err) {
@@ -115,15 +124,24 @@ export default function ViewAllEntries() {
     }
   };
 
-  const filteredEntries = entries.filter((e) =>
-    e.taxpayer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (e.remita || e.interswitch_ref || e.gokollect ||"")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase()) ||
-    (e.user_full_name || e.area_office || "")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  const filteredEntries = entries.filter((e) => {
+    const search = searchTerm.trim().toLowerCase();
+    if (!search) return true;
+
+    const stationValue = (e.station_name || e.user_full_name || e.area_office || "").toLowerCase();
+    const taxpayerValue = (e.taxpayer_name || "").toLowerCase();
+    const channelValue = (e.payment_channel || "").toLowerCase();
+    const referenceValue = (e.remita || e.interswitch_ref || e.gokollect || "").toLowerCase();
+    const taxItemValue = (e.tax_item || "").toLowerCase();
+
+    return (
+      stationValue.includes(search) ||
+      taxpayerValue.includes(search) ||
+      channelValue.includes(search) ||
+      referenceValue.includes(search) ||
+      taxItemValue.includes(search)
+    );
+  });
 
   const exportExcel = () => {
     const exportData = filteredEntries.map((e) => ({
@@ -204,7 +222,8 @@ export default function ViewAllEntries() {
           <div style={{ position: "relative" }}>
             <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
             <input
-              placeholder="Search Remita, Officer, or Taxpayer..."
+              value={searchTerm}
+              placeholder="Search ATO station, taxpayer, or payment channel..."
               style={{ padding: "10px 15px 10px 40px", borderRadius: "10px", border: "1px solid #cbd5e1", width: "320px", fontSize: "14px" }}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -257,9 +276,9 @@ export default function ViewAllEntries() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Fetching records...</td></tr>
+              <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Fetching records...</td></tr>
             ) : filteredEntries.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
+              <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
             ) : (
               filteredEntries.map(entry => (
                 <tr key={entry.id}>
