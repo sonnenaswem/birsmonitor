@@ -28,12 +28,17 @@ def process_softnet_transaction(payload):
     payment_date_raw = (
         payload.get("transactionDate")
         or payload.get("createdAt")
+        or payload.get("createdDate")
     )
 
     payment_date = None
 
-    month = 1
-    year = 2026
+    from django.utils import timezone
+
+    now = timezone.now()
+
+    month = now.month
+    year = now.year
 
     if payment_date_raw:
 

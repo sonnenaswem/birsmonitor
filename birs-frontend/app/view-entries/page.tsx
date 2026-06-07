@@ -14,6 +14,7 @@ interface Entry {
   remita_amount?: number;
   interswitch_amount?: number;
   gokollect_amount?: number;
+  total_amount?: number;
   date_of_remittance: string;
 }
 
@@ -122,7 +123,7 @@ export default function MyEntriesPage() {
                     <td style={styles.td}>{entry.taxpayer_name}</td>
                     <td style={{ ...styles.td, ...styles.amountCell }}>
                       {formatCurrency(
-                        entry.remita_amount || entry.interswitch_amount || entry.amount || 0
+                        Number(entry.total_amount || 0)
                       )}
                     </td>
                     <td style={styles.td}>

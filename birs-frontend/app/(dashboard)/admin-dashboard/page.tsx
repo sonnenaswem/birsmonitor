@@ -12,15 +12,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   LineChart,
   Line,
   LabelList,
-  Area,
-  AreaChart,
-  PieChart,
-  Pie,
   Cell,
   
 } from "recharts";
@@ -96,6 +91,9 @@ export default function AdminDashboard() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
+
   // Fetch dashboard data
   useEffect(() => {
     if (!authLoading && (!user || !user.role)) {
@@ -107,7 +105,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (user && ["director", "admin", "auditor", "assistant"].includes(user.role)) {
-      const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
+      const query =
+        appliedFrom && appliedTo
+          ? `?from_date=${appliedFrom}&to_date=${appliedTo}`
+          : "";
 
       Promise.all([
         api.get(`/api/performance/dashboard/${query}`, {
@@ -127,38 +128,20 @@ export default function AdminDashboard() {
         }).catch(() => ({ data: [] })),
       ])
         .then(([dashboardRes, analyticsRes, taxRes]) => {
-          console.log(
-            "ATO raw expanded:",
-            JSON.stringify(analyticsRes.data?.ato_performance, null, 2)
-          );
-
-          console.log(
-            "Top raw expanded:",
-            JSON.stringify(analyticsRes.data?.top_performers, null, 2)
-          );
-
-          console.log(
-            "Bottom raw expanded:",
-            JSON.stringify(analyticsRes.data?.bottom_performers, null, 2)
-          );
-
-          console.log(
-            "Tax raw expanded:",
-            JSON.stringify(taxRes.data, null, 2)
-          );
           setData(dashboardRes.data);
           setAnalyticsData(analyticsRes.data);
           setTaxItemData(taxRes.data || []);
           setLoading(false);
           // Trigger chart entrance animation after data loads
-          setTimeout(() => setChartAnimation(true), 100);
+          const timer = setTimeout(() => setChartAnimation(true), 100);
+
+          return () => clearTimeout(timer);
         })
         .catch((err) => {
-          console.error("Dashboard API Error:", err);
           setLoading(false);
         });
     }
-  }, [user, from, to]);
+  }, [user, appliedFrom, appliedTo]);
 
   // Chart data preparation with memoization for performance
   const revenueTrendData = useMemo(() => {
@@ -166,7 +149,20 @@ export default function AdminDashboard() {
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
-
+    const monthMap: Record<string, number> = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11,
+    };
     // Create base 12-month structure
     const fullYearData = months.map((month) => ({
       month,
@@ -176,18 +172,20 @@ export default function AdminDashboard() {
     // Inject backend values into matching months
     (data?.monthly_trend || []).forEach((item: any) => {
       const rawMonth =
-        item.month?.slice(0, 3) ||
-        item.name?.slice(0, 3);
+        String(item.month || item.name || "").slice(0, 3);
 
-      const revenue =
+      const revenue = Number(
         item.total ??
         item.amount ??
         item.revenue ??
-        0;
-
-      const monthIndex = months.findIndex(
-        (m) => m.toLowerCase() === rawMonth?.toLowerCase()
+        0
       );
+
+      const monthIndex =
+        monthMap[
+          rawMonth?.charAt(0).toUpperCase() +
+            rawMonth?.slice(1).toLowerCase()
+        ];
 
       if (monthIndex !== -1) {
         fullYearData[monthIndex].revenue = Number(revenue);
@@ -199,7 +197,7 @@ export default function AdminDashboard() {
 
   const atoPerformanceData = useMemo(() => 
     analyticsData?.ato_performance?.map((item: any) => {
-      const rawPercent = parseFloat(item.percent || 0);
+      const rawPercent = parseFloat(item.percent ?? 0);
       return {
         station_name:
           item.area_office ||
@@ -209,9 +207,9 @@ export default function AdminDashboard() {
           item.officer_name ||
           item.username ||
           "Unknown",
-        percent: rawPercent < 1 ? rawPercent * 100 : rawPercent,
-        target: item.target || 0,
-        revenue: item.revenue || 0,
+        percent: Number.isFinite(rawPercent) ? rawPercent : 0,
+        target: Number(item.target || 0),
+        revenue: Number(item.amount ?? item.revenue ?? 0),
       };
     }) || [], 
   [analyticsData]);
@@ -225,11 +223,7 @@ export default function AdminDashboard() {
         item.officer_name ||
         "Unknown",
 
-      amount:
-        item.amount ??
-        item.total ??
-        item.revenue ??
-        0,
+      amount: Number(item.amount ?? item.total ?? item.revenue ?? 0),
     })) || [],
   [analyticsData]);
 
@@ -242,11 +236,7 @@ export default function AdminDashboard() {
         item.officer_name ||
         "Unknown",
 
-      amount:
-        item.amount ??
-        item.total ??
-        item.revenue ??
-        0,
+      amount: Number(item.amount ?? item.total ?? item.revenue ?? 0),
     })) || [],
   [analyticsData]);
 
@@ -340,62 +330,6 @@ export default function AdminDashboard() {
     return null;
   };
 
-  // ✨ Custom Legend with Icons
-  const CustomLegend = ({ payload }: any) => {
-    if (!payload) return null;
-    return (
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        gap: "20px", 
-        padding: "12px 0",
-        flexWrap: "wrap",
-      }}>
-        {payload.map((entry: any, index: number) => (
-          <div 
-            key={`legend-${index}`} 
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "6px",
-              cursor: "pointer",
-              padding: "4px 10px",
-              borderRadius: "8px",
-              transition: "background 0.2s",
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = colors.backgroundAlt}
-            onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
-          >
-            <div style={{
-              width: "12px",
-              height: "12px",
-              borderRadius: "4px",
-              backgroundColor: entry.color,
-              boxShadow: `0 0 0 2px ${colors.card}, 0 2px 4px rgba(0,0,0,0.08)`,
-            }} />
-            <span style={{ 
-              fontSize: "12px", 
-              fontWeight: 500, 
-              color: colors.textMuted,
-            }}>
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // ✨ Get gradient definition for charts
-  const getgradientDef = (id: string, colors: string[]) => (
-    <defs key={id}>
-      <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor={colors[0]} stopOpacity={0.9} />
-        <stop offset="100%" stopColor={colors[1]} stopOpacity={0.6} />
-      </linearGradient>
-    </defs>
-  );
-
   // ✨ Get progress color with glow effect
   const getProgressColor = (percent: number): string => {
     if (percent >= 100) return colors.success;
@@ -407,7 +341,6 @@ export default function AdminDashboard() {
     setActiveDownload(type);
 
     if (type !== "excel") {
-      console.warn("PDF export is not supported yet.");
       setTimeout(() => setActiveDownload(null), 2000);
       return;
     }
@@ -415,7 +348,7 @@ export default function AdminDashboard() {
     try {
       const response = await api.get("/api/performance/export-csv/", {
         responseType: "blob",
-        params: from && to ? { from_date: from, to_date: to } : {},
+        params: appliedFrom && appliedTo ? { from_date: appliedFrom, to_date: appliedTo } : {},
       });
 
       const blob = new Blob([response.data], {
@@ -435,7 +368,6 @@ export default function AdminDashboard() {
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-      console.error("Download failed:", error);
     } finally {
       setTimeout(() => setActiveDownload(null), 2000);
     }
@@ -444,47 +376,51 @@ export default function AdminDashboard() {
   const handleRefresh = () => {
     setLoading(true);
     setChartAnimation(false);
-    const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
     
     Promise.all([
       api.get("/api/performance/dashboard/", {
-        params: from && to ? {
-          from_date: from,
-          to_date: to,
+        params: appliedFrom && appliedTo ? {
+          from_date: appliedFrom,
+          to_date: appliedTo,
         } : {},
       }),
       api.get("/api/tax/analytics/", {
-        params: from && to ? {
-          from_date: from,
-          to_date: to,
+        params: appliedFrom && appliedTo ? {
+          from_date: appliedFrom,
+          to_date: appliedTo,
         } : {},
       }),
       api.get("/api/tax/tax-item-aggregate/", {
-        params: from && to ? {
-          from_date: from,
-          to_date: to,
+        params: appliedFrom && appliedTo ? {
+          from_date: appliedFrom,
+          to_date: appliedTo,
         } : {},
       })
     ])
       .then(([dashboardRes, analyticsRes, taxRes]) => {
-        console.log("REFRESH ATO raw:", analyticsRes.data?.ato_performance);
-        console.log("REFRESH Top raw:", analyticsRes.data?.top_performers);
-        console.log("REFRESH Bottom raw:", analyticsRes.data?.bottom_performers);
-        console.log("REFRESH Tax raw:", taxRes.data);
         setData(dashboardRes.data);
         setAnalyticsData(analyticsRes.data);
         setTaxItemData(taxRes.data || []);
-        setTimeout(() => {
-          setLoading(false);
-          setChartAnimation(true);
-        }, 300);
+        
+        setLoading(false);
+        setChartAnimation(true);
+        
       })
       .catch((err) => {
-        console.error("Refresh Error:", err);
         setLoading(false);
       });
   };
+  const formatChartCurrency = (value: number) => {
+    if (value >= 1000000) {
+      return `₦${(value / 1000000).toFixed(1)}M`;
+    }
 
+    if (value >= 1000) {
+      return `₦${(value / 1000).toFixed(1)}K`;
+    }
+
+    return `₦${value}`;
+  };
   // ✨ Loading Skeleton for Charts
   const ChartSkeleton = ({ height = 280 }: { height?: number }) => (
     <div style={{
@@ -787,9 +723,36 @@ export default function AdminDashboard() {
                 e.target.style.boxShadow = "none";
               }}
             />
+            <button
+              onClick={() => {
+                setAppliedFrom(from);
+                setAppliedTo(to);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "10px 16px",
+                background: colors.primaryMid,
+                color: "white",
+                border: "none",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "13px",
+              }}
+            >
+              Apply Filter
+            </button>
             {(from || to) && (
               <button
-                onClick={() => { setFrom(""); setTo(""); }}
+                onClick={() => {
+                  setFrom("");
+                  setTo("");
+
+                  setAppliedFrom("");
+                  setAppliedTo("");
+                }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -1101,16 +1064,10 @@ export default function AdminDashboard() {
                       />
 
                       <YAxis
-                        axisLine={false}
+                        tickFormatter={formatChartCurrency}
+                        tick={{ fill: colors.textMuted, fontSize: 11, fontWeight: 500 }}
                         tickLine={false}
-                        tick={{
-                          fill: colors.textMuted,
-                          fontSize: 11,
-                          fontWeight: 500,
-                        }}
-                        tickFormatter={(v) =>
-                          v === 0 ? "0" : `₦${(v / 1000000).toFixed(0)}M`
-                        }
+                        axisLine={false}
                       />
 
                       <Tooltip
@@ -1374,6 +1331,11 @@ export default function AdminDashboard() {
                       {/* 1. Labels stack along the bottom horizontal X-Axis */}
                       <XAxis
                         dataKey="name"
+                        tickFormatter={(value) =>
+                          value.length > 18
+                            ? value.substring(0, 18) + "..."
+                            : value
+                        }
                         interval={0}
                         angle={-45}
                         textAnchor="end"
@@ -1420,19 +1382,7 @@ export default function AdminDashboard() {
                             fontSize: 10, 
                             fontWeight: 700,
                           }}
-                          formatter={(v: any) => {
-                            const value = Number(v || 0);
-
-                            if (value >= 1000000) {
-                              return `₦${(value / 1000000).toFixed(1)}M`;
-                            }
-
-                            if (value >= 1000) {
-                              return `₦${(value / 1000).toFixed(0)}K`;
-                            }
-
-                            return `₦${value.toLocaleString()}`;
-                          }}
+                          formatter={(v:any)=>formatChartCurrency(v)}
                         />
                         {taxItemChartData.slice(0, 12).map((entry: any, index: number) => (
                           <Cell 
@@ -1520,12 +1470,11 @@ export default function AdminDashboard() {
                     tickLine={false}
                     tick={{ fill: colors.text, fontSize: 12, fontWeight: 600 }}
                     width={80}
-                    tickFormatter={(name: string) => {
-                      const item = topPerformersData.find((d: { station_name: string; initials?: string }) => 
-                        d.station_name === name
-                      );
-                      return item?.initials || name;
-                    }}
+                    tickFormatter={(name: string) =>
+                      name.length > 12
+                        ? `${name.slice(0, 12)}...`
+                        : name
+                    }
                   />
                   <Tooltip 
                     content={<CustomTooltip formatter={formatCurrency} />}
@@ -1622,12 +1571,11 @@ export default function AdminDashboard() {
                     tickLine={false}
                     tick={{ fill: colors.text, fontSize: 12, fontWeight: 600 }}
                     width={80}
-                    tickFormatter={(name: string) => {
-                      const item = bottomPerformersData.find((d: { station_name: string; initials?: string }) => 
-                        d.station_name === name
-                      );
-                      return item?.initials || name;
-                    }}
+                    tickFormatter={(name: string) =>
+                      name.length > 12
+                        ? `${name.slice(0, 12)}...`
+                        : name
+                    }
                   />
                   <Tooltip 
                     content={<CustomTooltip formatter={formatCurrency} />}
@@ -1669,74 +1617,6 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
-
-        {/* ✨ Enhanced Export Section
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "flex-end", 
-          marginTop: "16px",
-          animation: chartAnimation ? "slideIn 0.5s ease forwards 0.8s" : "none",
-          opacity: chartAnimation ? 1 : 0,
-        }}>
-          <div style={{
-            ...styles.exportCard,
-            padding: "18px 24px",
-            background: `linear-gradient(135deg, ${colors.card} 0%, ${colors.backgroundAlt} 100%)`,
-            border: `1px solid ${colors.border}`,
-            borderRadius: "14px",
-            boxShadow: "0 4px 16px rgba(2, 44, 34, 0.08)",
-          }}>
-            <span style={{ 
-              fontSize: "13px", 
-              color: colors.textMuted, 
-              fontWeight: 600,
-              marginRight: "12px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}>
-              <FileText size={14} />
-              Export Report:
-            </span>
-            <button
-              style={{
-                ...styles.exportBtn,
-                background: `linear-gradient(135deg, ${colors.primaryMid} 0%, ${colors.primary} 100%)`,
-                padding: "10px 20px",
-                boxShadow: `0 4px 12px ${colors.glowEmerald}`,
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = `0 6px 18px ${colors.glowGreen}`;
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = `0 4px 12px ${colors.glowEmerald}`;
-              }}
-              onClick={() => handleDownload("excel")}
-              disabled={!!activeDownload}
-            >
-              <FileText size={14} />
-              Excel
-            </button>
-            <button
-              style={{
-                ...styles.exportBtn,
-                background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryLight} 100%)`,
-                padding: "10px 20px",
-                marginLeft: "10px",
-                boxShadow: `0 4px 12px rgba(2, 44, 34, 0.25)`,
-                opacity: 0.6,
-                cursor: "not-allowed",
-              }}
-              disabled
-              title="PDF export coming soon"
-            >
-              <FileText size={14} />
-              PDF
-            </button>
-          </div>
-        </div> */}
       </div>
     </DashboardLayout>
   );
@@ -1747,9 +1627,10 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: {
     fontFamily: '"Inter", "Segoe UI", Roboto, -apple-system, sans-serif',
     minHeight: "100vh",
-    padding: "24px 4%", // Dynamic side padding for small screens
-    maxWidth: "100vw", // Hard lock page width
-    overflowX: "hidden", // Prevent full-page side scrolling entirely
+    padding: "24px 4%",
+    maxWidth: "100%",
+    width: "100%",
+    overflowX: "clip",
     boxSizing: "border-box",
     transition: "background 0.3s ease",
   },
@@ -1845,7 +1726,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: "20px 22px",
     borderRadius: "16px",
     border: "1px solid #bbf7d0",
-    boxShadow: "0 4px 166px rgba(2, 44, 34, 0.08)",
+    boxShadow: "0 4px 16px rgba(2, 44, 34, 0.08)",
     position: "relative",
     overflow: "hidden",
   },

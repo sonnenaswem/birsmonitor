@@ -116,7 +116,7 @@ class TaxEntryActionView(APIView):
             status=status.HTTP_204_NO_CONTENT
         )
 
-class AllEntriesListView(APIView):
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -445,7 +445,7 @@ class AnalyticsSummaryView(APIView):
 
         monthly_data = (
             yearly_entries
-            .values("month")
+            .values("year", "month")
             .annotate(
                 remita=Coalesce(
                     Sum("remita_amount"),
@@ -461,7 +461,7 @@ class AnalyticsSummaryView(APIView):
         )
 
         monthly_map = {
-            row["month"]: float(
+            (row["year"], row["month"]) : float(
                 row["remita"] +
                 row["interswitch"] +
                 row["gokollect"]
@@ -581,9 +581,25 @@ class AnalyticsSummaryView(APIView):
 class ATOItemBreakdownView(APIView):
     def get(self, request, ato_id):
         # Groups the sum of revenue by tax_item for a specific ATO
-        data = TaxEntry.objects.filter(user_id=ato_id).values('tax_item').annotate(
-            total=Sum('total_amount')
-        ).order_by('-total')
+        data = (
+            TaxEntry.objects
+            .filter(user_id=ato_id)
+            .values("tax_item")
+            .annotate(
+                remita=Coalesce(
+                    Sum("remita_amount"),
+                    Value(0, output_field=DecimalField())
+                ),
+                interswitch=Coalesce(
+                    Sum("interswitch_amount"),
+                    Value(0, output_field=DecimalField())
+                ),
+                gokollect=Coalesce(
+                    Sum("gokollect_amount"),
+                    Value(0, output_field=DecimalField())
+                ),
+            )
+        )
         
         return Response(data)
     
@@ -625,7 +641,7 @@ def tax_item_aggregate(request):
                     Sum("gokollect_amount"),
                     Value(0, output_field=DecimalField()), output_field=DecimalField()),
             )
-            .order_by("-remita_sum")
+            .order_by("-tax_item")
         )
 
         result = []
@@ -640,6 +656,12 @@ def tax_item_aggregate(request):
                 "tax_item": item["tax_item"],
                 "total": total,
             })
+
+        result = sorted(
+            result,
+            key=lambda x: x["total"],
+            reverse=True
+        )
 
         return Response(result)
     

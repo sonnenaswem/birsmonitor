@@ -69,7 +69,7 @@ export default function AtoDashboard() {
             <p style={styles.value}>₦{data?.target?.toLocaleString() || "0.00"}</p>
           </div>
           <div style={styles.card}>
-            <span style={styles.label}>💰 Cumulative Total</span>
+            <span style={styles.label}>💰 Monthly Total</span>
             <p style={{ ...styles.value, color: "#16a34a" }}>₦{data?.grand_total?.toLocaleString() || "0.00"}</p>
           </div>
           <div style={styles.card}>

@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     TaxEntryViewSet,
     TaxEntryActionView,
-    AllEntriesListView,
     AnalyticsSummaryView,
     ATOItemBreakdownView,
     UserTaxEntriesView,
@@ -17,9 +16,6 @@ router = DefaultRouter()
 router.register(r"entries", TaxEntryViewSet, basename="tax-entry")
 
 urlpatterns = [
-    # All entries (admin/auditor/director)
-    path("all/", AllEntriesListView.as_view(), name="all-tax-entries"),
-
     # Current user entries
     path("my-entries/", UserTaxEntriesView.as_view(), name="my-tax-entries"),
 
