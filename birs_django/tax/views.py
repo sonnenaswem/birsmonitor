@@ -658,3 +658,15 @@ class UserTaxEntriesView(generics.ListAPIView):
     
     def get_queryset(self):
         return TaxEntry.objects.filter(user=self.request.user).order_by('-date_uploaded')
+
+from django.http import JsonResponse
+
+def ssl_debug(request):
+    return JsonResponse({
+        "is_secure": request.is_secure(),
+        "scheme": request.scheme,
+        "META_X_FORWARDED_PROTO":
+            request.META.get("HTTP_X_FORWARDED_PROTO"),
+        "META_HOST":
+            request.META.get("HTTP_HOST"),
+    })

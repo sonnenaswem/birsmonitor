@@ -7,7 +7,7 @@ from tax.services.sync_service import (
 )
 
 from tax.services.softnet_service import (
-    SoftnetService
+    pull_softnet_transactions
 )
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def sync_gokollect_task():
 @shared_task
 def sync_softnet_task():
 
-    SoftnetService.pull_all_active_terminal_transactions()
+    pull_softnet_transactions()
 
     logger.info(
         "Softnet sync complete"

@@ -1,6 +1,6 @@
 import logging
 import requests
-
+import json
 from django.conf import settings
 
 from tax.services.reconciliation_service import (
@@ -36,7 +36,7 @@ class SoftnetService:
             headers=SoftnetService.headers(),
             timeout=60,
         )
-
+        
         response.raise_for_status()
 
         return response.json()
@@ -56,17 +56,37 @@ class SoftnetService:
         params = {
             "page": page,
             "size": size,
-            "sort": "createdAt,desc",
         }
 
         response = requests.get(
             url,
             headers=SoftnetService.headers(),
-            params=params,
+            params={
+                "page": page,
+                "size": size,
+            },
             timeout=60,
         )
+        
 
-        response.raise_for_status()
+        print("\n========== SOFTNET RAW RESPONSE ==========")
+        print(json.dumps(response.json(), indent=4))
+        print("==========================================\n")
+        print(response.url)
+        print(
+            f"TERMINAL={terminal_id} "
+            f"STATUS={response.status_code}"
+        )
+
+        if response.status_code != 200:
+
+            print(response.text)
+
+            return {
+                "data": {
+                    "content": []
+                }
+            }
 
         return response.json()
 
@@ -86,6 +106,12 @@ class SoftnetService:
             headers=SoftnetService.headers(),
             timeout=60,
         )
+        print("\n========== SOFTNET RAW RESPONSE ==========")
+        print(json.dumps(response.json(), indent=4))
+        print("==========================================\n")
+        print("URL:", response.url)
+        print("STATUS:", response.status_code)
+        print("BODY:", response.text[:1000])
 
         if response.status_code == 404:
 
@@ -138,30 +164,59 @@ def pull_softnet_transactions():
 
         try:
 
-            payload = (
-                SoftnetService
-                .get_transactions_by_terminal(
-                    terminal_id=terminal_id
-                )
-            )
+            page = 0
+            terminal_processed = 0
 
-            transactions = (
-                payload.get("data", {})
-                .get("content", [])
-            )
+            while True:
 
-            for transaction in transactions:
-
-                process_softnet_transaction(
-                    transaction
+                payload = (
+                    SoftnetService
+                    .get_transactions_by_terminal(
+                        terminal_id=terminal_id,
+                        page=page,
+                        size=100,
+                    )
                 )
 
-                total_processed += 1
+                data = payload.get("data", {})
+
+                transactions = data.get(
+                    "content",
+                    []
+                )
+
+                if not transactions:
+                    break
+
+                for transaction in transactions:
+
+                    process_softnet_transaction(
+                        transaction
+                    )
+
+                    total_processed += 1
+                    terminal_processed += 1
+
+                total_pages = data.get(
+                    "totalPages",
+                    1
+                )
+
+                logger.info(
+                    f"{terminal_id} | "
+                    f"Page {page + 1}/{total_pages} | "
+                    f"{len(transactions)} txns"
+                )
+
+                page += 1
+
+                if page >= total_pages:
+                    break
 
             logger.info(
                 f"Softnet sync OK | "
                 f"{terminal_id} | "
-                f"{len(transactions)} txns"
+                f"{terminal_processed} txns"
             )
 
         except Exception as e:
