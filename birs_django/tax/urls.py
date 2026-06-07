@@ -17,7 +17,6 @@ router = DefaultRouter()
 router.register(r"entries", TaxEntryViewSet, basename="tax-entry")
 
 urlpatterns = [
-
     # Current user entries
     path("my-entries/", UserTaxEntriesView.as_view(), name="my-tax-entries"),
 
