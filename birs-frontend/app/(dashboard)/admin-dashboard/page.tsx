@@ -94,55 +94,47 @@ export default function AdminDashboard() {
   const [appliedFrom, setAppliedFrom] = useState("");
   const [appliedTo, setAppliedTo] = useState("");
 
-  // Fetch dashboard data
+  // Redirect guard
   useEffect(() => {
-    if (!authLoading && (!user || !user.role)) {
+    if (authLoading) return;
+    if (!user?.role) {
       router.push("/login");
-    } else if (user?.role && !["director", "admin", "auditor", "assistant"].includes(user.role)) {
+    } else if (!["director", "admin", "auditor", "assistant"].includes(user.role)) {
       router.push("/ato-dashboard");
     }
   }, [user, authLoading, router]);
 
+  // Fetch dashboard data
   useEffect(() => {
-    if (user && ["director", "admin", "auditor", "assistant"].includes(user.role)) {
-      const query =
-        appliedFrom && appliedTo
-          ? `?from_date=${appliedFrom}&to_date=${appliedTo}`
-          : "";
+    if (authLoading) return;
+    if (!user?.role) return;
+    if (!["director", "admin", "auditor", "assistant"].includes(user.role)) return;
 
-      Promise.all([
-        api.get(`/api/performance/dashboard/${query}`, {
-          headers: {
-            "Cache-Control": "no-cache",
-          },
-        }),
-        api.get(`/api/tax/analytics/${query}`, {
-          headers: {
-            "Cache-Control": "no-cache",
-          },
-        }),
-        api.get(`/api/tax/tax-item-aggregate/${query}`, {
-          headers: {
-            "Cache-Control": "no-cache",
-          },
-        }).catch(() => ({ data: [] })),
-      ])
-        .then(([dashboardRes, analyticsRes, taxRes]) => {
-          setData(dashboardRes.data);
-          setAnalyticsData(analyticsRes.data);
-          setTaxItemData(taxRes.data || []);
-          setLoading(false);
-          // Trigger chart entrance animation after data loads
-          const timer = setTimeout(() => setChartAnimation(true), 100);
+    const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
 
-          return () => clearTimeout(timer);
-        })
-        .catch((err) => {
-          setLoading(false);
-        });
-    }
-  }, [user, appliedFrom, appliedTo]);
-
+    Promise.all([
+      api.get(`/api/performance/dashboard/${query}`, {
+        headers: { "Cache-Control": "no-cache" },
+      }),
+      api.get(`/api/tax/analytics/${query}`, {
+        headers: { "Cache-Control": "no-cache" },
+      }),
+      api.get(`/api/tax/tax-item-aggregate/${query}`, {
+        headers: { "Cache-Control": "no-cache" },
+      }).catch(() => ({ data: [] })),
+    ])
+      .then(([dashboardRes, analyticsRes, taxRes]) => {
+        setData(dashboardRes.data);
+        setAnalyticsData(analyticsRes.data);
+        setTaxItemData(taxRes.data || []);
+        setLoading(false);
+        const timer = setTimeout(() => setChartAnimation(true), 100);
+        return () => clearTimeout(timer);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
+  }, [user, authLoading, from, to]);
   // Chart data preparation with memoization for performance
   const revenueTrendData = useMemo(() => {
     const months = [
