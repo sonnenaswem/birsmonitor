@@ -27,6 +27,7 @@ def process_softnet_transaction(payload):
 
     payment_date_raw = (
         payload.get("transactionDate")
+        or payload.get("createdDate")
         or payload.get("createdAt")
     )
 
@@ -50,7 +51,18 @@ def process_softnet_transaction(payload):
             pass
 
     service_name = payload.get("serviceName") or "POS Revenue"
+    payment_channel = (
+        payload.get("birsPaymentChannel")
+        or payload.get("paymentChannel")
+        or ""
+    ).strip().upper()
 
+    print("=" * 80)
+    print("SOFTNET DEBUG")
+    print("REFERENCE:", payment_reference)
+    print("CHANNEL:", payment_channel)
+    print("AMOUNT:", amount)
+    print("=" * 80)
     existing = TaxEntry.objects.filter(
         softnet_reference=payment_reference
     ).first()
@@ -87,8 +99,21 @@ def process_softnet_transaction(payload):
             subhead=service_name,
             taxpayer_name=customer_name,
             gross_amount=amount,
-            interswitch_amount=amount,
-            remita_amount=amount,
+
+            remita_amount=(
+                amount
+                if payment_channel == "REMITA"
+                else Decimal("0.00")
+            ),
+
+            interswitch_amount=(
+                amount
+                if payment_channel in [
+                    "INTERSWITCH",
+                    "INTERSWITCH_PAYDIRECT",
+                ]
+                else Decimal("0.00")
+            ),
             softnet_reference=payment_reference,
             softnet_verified=True,
             softnet_status="verified",

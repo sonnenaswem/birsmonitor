@@ -573,7 +573,7 @@ def admin_dashboard(request):
             chart_data = (
                 entries
                 .filter(date_uploaded__isnull=False)
-                .annotate(trunc_month=TruncMonth("date_uploaded"))
+                .annotate(trunc_month=TruncMonth("date_of_remittance"))
                 .values("trunc_month")
                 .annotate(
                     remita=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
@@ -616,7 +616,7 @@ def admin_dashboard(request):
         chart_data = (
             entries
             .filter(date_uploaded__isnull=False)
-            .annotate(trunc_month=TruncMonth("date_uploaded"))
+            .annotate(trunc_month=TruncMonth("date_of_remittance"))
             .values("trunc_month")
             .annotate(
                 remita=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
@@ -644,7 +644,7 @@ def admin_dashboard(request):
         monthly_trend = (
             all_entries
             .filter(date_uploaded__isnull=False)
-            .annotate(trunc_month=TruncMonth("date_uploaded"))
+            .annotate(trunc_month=TruncMonth("date_of_remittance"))
             .values("trunc_month")
             .annotate(
                 total=
@@ -662,7 +662,7 @@ def admin_dashboard(request):
             chart_data = (
                 entries
                 .filter(date_uploaded__isnull=False)
-                .annotate(trunc_month=TruncMonth("date_uploaded"))
+                .annotate(trunc_month=TruncMonth("date_of_remittance"))
                 .values("trunc_month")
                 .annotate(
                     remita=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),

@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import CustomTokenObtainPairView
 from performance.views import performance_summary
 from django.http import HttpResponse
-
+from tax.views import AnalyticsSummaryView
 
 def home(request):
     return HttpResponse("Hello from birs-backend!")
@@ -41,4 +41,7 @@ urlpatterns = [
         performance_summary,
         name="performance_summary_alias"
     ),
+    path("api/analytics/summary/", AnalyticsSummaryView.as_view(), name="analytics-summary")
+   
+
 ]
