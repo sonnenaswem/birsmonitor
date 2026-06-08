@@ -526,7 +526,7 @@ def admin_dashboard(request):
                     remita_total=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
                     interswitch_total=Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
                     gokollect_total=Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    days_active=Count("date_of_remittance__date", distinct=True),
+                    days_active=Count("date_of_remittance", distinct=True),
                 )
             )
 
