@@ -140,54 +140,12 @@ export default function AdminDashboard() {
   }, [effectiveRole, effectiveLoading, from, to]);
   // Chart data preparation with memoization for performance
   const revenueTrendData = useMemo(() => {
-    const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
-    const monthMap: Record<string, number> = {
-      Jan: 0,
-      Feb: 1,
-      Mar: 2,
-      Apr: 3,
-      May: 4,
-      Jun: 5,
-      Jul: 6,
-      Aug: 7,
-      Sep: 8,
-      Oct: 9,
-      Nov: 10,
-      Dec: 11,
-    };
-    // Create base 12-month structure
-    const fullYearData = months.map((month) => ({
-      month,
-      revenue: 0,
-    }));
-
-    // Inject backend values into matching months
-    (data?.monthly_trend || []).forEach((item: any) => {
-      const rawMonth =
-        String(item.month || item.name || "").slice(0, 3);
-
-      const revenue = Number(
-        item.total ??
-        item.amount ??
-        item.revenue ??
-        0
-      );
-
-      const monthIndex =
-        monthMap[
-          rawMonth?.charAt(0).toUpperCase() +
-            rawMonth?.slice(1).toLowerCase()
-        ];
-
-      if (monthIndex !== -1) {
-        fullYearData[monthIndex].revenue = Number(revenue);
-      }
-    });
-
-    return fullYearData;
+    return (data?.monthly_trend || [])
+      .map((item: any) => ({
+        month: String(item.month || item.name || item.label || "").trim(),
+        revenue: Number(item.total ?? item.amount ?? item.revenue ?? 0),
+      }))
+      .filter((item: { month: string; revenue: number }) => item.month);
   }, [data]);
 
   const atoPerformanceData = useMemo(() => 
@@ -850,7 +808,7 @@ export default function AdminDashboard() {
           {[
             {
               label: "Remita",
-              value: formatCurrency(analyticsData?.total_remita || 0),
+              value: formatCurrency(analyticsData?.total_remita ?? analyticsData?.remita_total ?? 0),
               icon: <Wallet size={14} />,
               sub: "Remita Collections",
               gradient: colors.chartGradient1,
@@ -858,7 +816,7 @@ export default function AdminDashboard() {
             },
             {
               label: "Interswitch",
-              value: formatCurrency(analyticsData?.total_interswitch || 0),
+              value: formatCurrency(analyticsData?.total_interswitch ?? analyticsData?.interswitch_total ?? 0),
               icon: <FileText size={14} />,
               sub: "Interswitch Collections",
               gradient: colors.chartGradient2,
@@ -866,16 +824,16 @@ export default function AdminDashboard() {
             },
             {
               label: "GoKollect",
-              value: formatCurrency(analyticsData?.total_gokollect || 0),
-              icon: <RefreshCw size={14} />, // Changed icon to distinguish it as "Coming Soon/Processing"
-              sub: "Novus Collections",
-              gradient: colors.chartGradient1, // Muted gradient to show it's inactive
+              value: formatCurrency(analyticsData?.total_gokollect ?? analyticsData?.gokollect_total ?? 0),
+              icon: <RefreshCw size={14} />,
+              sub: "GoKollect Collections",
+              gradient: colors.chartGradient1,
               iconBg: colors.primaryMid,
               isPending: true,
             },
             {
               label: "Grand Total",
-              value: formatCurrency(analyticsData?.grand_total || 0),
+              value: formatCurrency(analyticsData?.grand_total ?? analyticsData?.total_revenue ?? 0),
               icon: <TrendingUp size={14} />,
               sub: "All Revenue Streams",
               gradient: colors.chartGradient3,
