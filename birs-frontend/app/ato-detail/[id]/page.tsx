@@ -70,39 +70,10 @@ export default function ATODetailPage() {
     th: { padding: "12px", textAlign: "left", fontSize: "12px", color: "#64748b", borderBottom: "1px solid #f1f5f9" },
     td: { padding: "12px", borderBottom: "1px solid #f1f5f9", fontSize: "14px" }
   };
-  // ✅ Build full 12-month trend like admin dashboard
-  const trendData = (() => {
-    const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
-
-    const fullYear = months.map((month) => ({
-      month,
-      amount: 0,
-    }));
-
-    (data?.activity_trend || []).forEach((item: any) => {
-      const rawMonth =
-        item.month?.slice(0, 3) ||
-        item.date?.slice(0, 3);
-
-      const amount =
-        item.amount ||
-        item.total ||
-        0;
-
-      const monthIndex = months.findIndex(
-        (m) => m.toLowerCase() === rawMonth?.toLowerCase()
-      );
-
-      if (monthIndex !== -1) {
-        fullYear[monthIndex].amount = Number(amount);
-      }
-    });
-
-    return fullYear;
-  })();
+  const trendData = (data?.activity_trend || []).map((item: any) => ({
+    label: item.date || item.month || "",
+    amount: Number(item.amount || item.total || 0),
+  }));
   const verifiedPercent = data.total ? (data.pos_total / data.total) * 100 : 0;
   return (
     <DashboardLayout>
@@ -196,7 +167,7 @@ export default function ATODetailPage() {
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "30px" }}>
         <div>
           <div style={{ ...styles.statCard, marginBottom: "30px", height: "350px" }}>
-            <h3 style={styles.sectionTitle}><TrendingUp size={20} /> Collection Trend (Last 7 Days)</h3>
+            <h3 style={styles.sectionTitle}><TrendingUp size={20} /> Collection Trend</h3>
             <div
               style={{
                 width: "100%",
@@ -217,7 +188,7 @@ export default function ATODetailPage() {
                     />
 
                     <XAxis
-                      dataKey="month"
+                      dataKey="label"
                       axisLine={false}
                       tickLine={false}
                       tick={{

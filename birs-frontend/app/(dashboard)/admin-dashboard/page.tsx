@@ -42,6 +42,9 @@ export default function AdminDashboard() {
   const [activeDownload, setActiveDownload] = useState<string | null>(null);
   const [chartAnimation, setChartAnimation] = useState(false);
   const router = useRouter();
+  const localRole = typeof window !== "undefined" ? localStorage.getItem("role") : null;
+  const effectiveRole = user?.role || localRole;
+  const effectiveLoading = authLoading && !localRole;
 
   const formatCurrency = (num: number) =>
     "₦" + Number(num || 0).toLocaleString("en-NG", {
@@ -96,19 +99,19 @@ export default function AdminDashboard() {
 
   // Redirect guard
   useEffect(() => {
-    if (authLoading) return;
-    if (!user?.role) {
+    if (effectiveLoading) return;
+    if (!effectiveRole) {
       router.push("/login");
-    } else if (!["director", "admin", "auditor", "assistant"].includes(user.role)) {
+    } else if (!["director", "admin", "auditor", "assistant"].includes(effectiveRole)) {
       router.push("/ato-dashboard");
     }
-  }, [user, authLoading, router]);
+  }, [effectiveRole, effectiveLoading, router]);
 
   // Fetch dashboard data
   useEffect(() => {
-    if (authLoading) return;
-    if (!user?.role) return;
-    if (!["director", "admin", "auditor", "assistant"].includes(user.role)) return;
+    if (effectiveLoading) return;
+    if (!effectiveRole) return;
+    if (!["director", "admin", "auditor", "assistant"].includes(effectiveRole)) return;
 
     const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
 
@@ -134,7 +137,7 @@ export default function AdminDashboard() {
       .catch(() => {
         setLoading(false);
       });
-  }, [user, authLoading, from, to]);
+  }, [effectiveRole, effectiveLoading, from, to]);
   // Chart data preparation with memoization for performance
   const revenueTrendData = useMemo(() => {
     const months = [

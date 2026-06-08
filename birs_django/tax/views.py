@@ -43,14 +43,53 @@ class PerformanceSummaryViewSet(viewsets.ModelViewSet):
 class TaxEntryViewSet(viewsets.ModelViewSet):
     serializer_class = TaxEntrySerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = TaxEntryPagination
 
     def get_queryset(self):
         user = self.request.user
-        base_queryset = TaxEntry.objects.select_related("user")
-        if user.is_staff:  # Admin can see all
-            return base_queryset.order_by("-date_uploaded")
 
-        return base_queryset.filter(user=user).order_by('-date_uploaded')
+        queryset = (
+            TaxEntry.objects
+            .select_related("user")
+            .only(
+                "id",
+                "tax_item",
+                "taxpayer_name",
+                "date_of_remittance",
+                "remita",
+                "interswitch_ref",
+                "gokollect",
+                "remita_amount",
+                "interswitch_amount",
+                "gokollect_amount",
+                "total_amount",
+                "source",
+                "area_office",
+                "user__username",
+                "user__full_name",
+            )
+        )
+
+        from_date = self.request.GET.get("from_date")
+        to_date = self.request.GET.get("to_date")
+
+        if from_date and to_date:
+            queryset = queryset.filter(
+                date_of_remittance__range=[
+                    from_date,
+                    to_date
+                ]
+            )
+
+        if not user.is_staff:
+            queryset = queryset.filter(
+                user=user
+            )
+
+        return queryset.order_by(
+            "-date_of_remittance",
+            "-id"
+        )
 
     def perform_create(self, serializer):
         from birs_django.utils.date_utils import get_current_period
@@ -117,97 +156,7 @@ class TaxEntryActionView(APIView):
         )
 
 
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-
-        if user.role not in ["admin", "auditor", "director"]:
-            return Response({"error": "Access denied."}, status=403)
-
-        from_date = request.GET.get("from_date")
-        to_date = request.GET.get("to_date")
-
-        queryset = TaxEntry.objects.all()
-
-        if from_date and to_date:
-            queryset = queryset.filter(
-                date_of_remittance__range=[from_date, to_date]
-            )
-
-        queryset = queryset.select_related("user").order_by(
-            "-date_of_remittance",
-            "-id"
-        )
-
-        # PAGINATION
-        paginator = TaxEntryPagination()
-        paginated_queryset = paginator.paginate_queryset(queryset, request)
-
-        entries = []
-
-        for entry in paginated_queryset:
-            remita_amount = float(entry.remita_amount or 0)
-            interswitch_amount = float(entry.interswitch_amount or 0)
-            gokollect_amount = float(entry.gokollect_amount or 0)
-
-            entries.append({
-                "id": entry.id,
-                "tax_item": entry.tax_item,
-                "subhead": entry.subhead,
-                "taxpayer_name": entry.taxpayer_name,
-                "date_of_remittance": entry.date_of_remittance,
-                "remita": entry.remita,
-                "interswitch_ref": entry.interswitch_ref,
-                "gokollect": entry.gokollect,
-                "vehicle_type": entry.vehicle_type,
-                "registration_number": entry.registration_number,
-                "source": entry.source,
-                "remita_verified": entry.remita_verified,
-                "interswitch_verified": entry.interswitch_verified,
-                "gokollect_verified": entry.gokollect_verified,
-                "remita_amount": str(entry.remita_amount) if entry.remita_amount else None,
-                "interswitch_amount": str(entry.interswitch_amount) if entry.interswitch_amount else None,
-                "gokollect_amount": str(entry.gokollect_amount) if entry.gokollect_amount else None,
-                "month": entry.month,
-                "year": entry.year,
-                "user_full_name": (
-                    getattr(entry.user, "full_name", "")
-                    if entry.user else ""
-                ),
-                "area_office": entry.area_office,
-                "total_amount": str(entry.total_amount),
-                
-                "display_reference": (
-                    entry.remita or
-                    entry.interswitch_ref or
-                    entry.gokollect or
-                    "N/A"
-                ),
-
-                "payment_channel": (
-                    "Remita" if entry.remita
-                    else "Interswitch" if entry.interswitch_ref
-                    else "Gokollect" if entry.gokollect
-                    else "Unknown"
-                ),
-
-                "display_amount": (
-                    remita_amount if remita_amount > 0
-                    else interswitch_amount if interswitch_amount > 0
-                    else gokollect_amount if gokollect_amount > 0
-                    else float(entry.total_amount or 0)
-                ),
-
-            
-                "station_name": (
-                    entry.user.username
-                    if entry.user else entry.area_office or "Headquarters"
-                ),
-            })
-
-        return paginator.get_paginated_response(entries)
-    
+        
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -390,7 +339,7 @@ class AnalyticsSummaryView(APIView):
 
     def get(self, request):
       try:
-        if request.user.role not in ["admin", "director", "auditor"]:
+        if request.user.role not in ["admin", "director", "auditor", "assistant"]:
                 return Response(
                     {"error": "You do not have permission to view analytics"},
                     status=status.HTTP_403_FORBIDDEN
@@ -679,7 +628,7 @@ class UserTaxEntriesView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        return TaxEntry.objects.filter(user=self.request.user).order_by('-date_uploaded')
+        return TaxEntry.objects.filter(user=self.request.user).order_by('-date_of_remittance')
 
 from django.http import JsonResponse
 

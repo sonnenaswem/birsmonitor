@@ -12,7 +12,27 @@ const api = axios.create({
 // ===============================
 api.interceptors.request.use(
   (config) => {
-    const access = getCookie("access");
+    // Read cookie manually — cookies-next can be unreliable in browser context
+    let access: string | undefined;
+
+    if (typeof document !== "undefined") {
+      const match = document.cookie
+        .split(";")
+        .find(c => c.trim().startsWith("access="));
+      if (match) {
+        access = match.split("=").slice(1).join("=").trim();
+      }
+    }
+
+    // Fall back to cookies-next, then localStorage
+    if (!access) {
+      const cookieVal = getCookie("access");
+      access = typeof cookieVal === "string" ? cookieVal : undefined;
+    }
+
+    if (!access && typeof localStorage !== "undefined") {
+      access = localStorage.getItem("token") ?? undefined;
+    }
 
     if (access) {
       config.headers.Authorization = `Bearer ${access}`;
@@ -47,8 +67,12 @@ const refreshAccessToken = async () => {
       return null;
     }
 
+    const refreshUrl = process.env.NEXT_PUBLIC_API_URL
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`
+      : "/api/auth/token/refresh/";
+
     const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`,
+      refreshUrl,
       {
         refresh,
       },
@@ -66,10 +90,13 @@ const refreshAccessToken = async () => {
       secure: process.env.NODE_ENV === "production",
     });
 
+    localStorage.setItem("token", newAccess);
+
     return newAccess;
   } catch (error) {
     deleteCookie("access");
     deleteCookie("refresh");
+    localStorage.removeItem("token");
 
     if (typeof window !== "undefined") {
       window.location.href = "/login";

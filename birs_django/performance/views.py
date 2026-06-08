@@ -121,9 +121,9 @@ def performance_summary(request):
     total_values = [pos_values[i] + manual_values[i] for i in range(len(pos_values))]
 
     
-    recent_entries = TaxEntry.objects.filter(user=user).order_by('-date_uploaded')[:10]
+    recent_entries = TaxEntry.objects.filter(user=user).order_by('-date_of_remittance')[:10]
     record_data = [{
-        "date_uploaded": rec.date_uploaded.strftime("%Y-%m-%d"),
+        "date_of_remittance": rec.date_of_remittance.strftime("%Y-%m-%d"),
         "remita_amount": float(rec.remita_amount or 0),
         "interswitch_amount": float(rec.interswitch_amount or 0),
         "gokollect_amount": float(rec.gokollect_amount or 0)
@@ -526,7 +526,7 @@ def admin_dashboard(request):
                     remita_total=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
                     interswitch_total=Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
                     gokollect_total=Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    days_active=Count("date_uploaded__date", distinct=True),
+                    days_active=Count("date_of_remittance__date", distinct=True),
                 )
             )
 

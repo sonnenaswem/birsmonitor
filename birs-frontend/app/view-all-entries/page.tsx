@@ -26,7 +26,7 @@ interface TaxEntry {
   interswitch_ref?: string | null;
   gokollect?: string | null;
   payment_channel?: string;
-
+  channel?: string;
   remita_amount?: string | null;
   interswitch_amount?: string | null;
   gokollect_amount?: string | null;
@@ -52,8 +52,21 @@ export default function ViewAllEntries() {
 
   const parseEntryTimestamp = (value?: string | null) => {
     if (!value) return -Infinity;
-    const timestamp = Date.parse(value);
-    return Number.isFinite(timestamp) ? timestamp : -Infinity;
+
+    const normalized = value.trim();
+    const parsed = Date.parse(normalized);
+    if (Number.isFinite(parsed)) return parsed;
+
+    const match = normalized.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (match) {
+      const day = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      let year = Number(match[3]);
+      if (year < 100) year += 2000;
+      return Date.UTC(year, month, day);
+    }
+
+    return -Infinity;
   };
 
   useEffect(() => {
@@ -64,7 +77,7 @@ export default function ViewAllEntries() {
   const fetchEntries = async () => {
     setLoading(true);
     try {
-      let url = `/api/tax/all/?page=${page}&page_size=15`;
+      let url = `/api/tax/entries/?page=${page}&page_size=15`;
 
       if (from && to) {
         url += `&from_date=${from}&to_date=${to}`;
@@ -97,7 +110,11 @@ export default function ViewAllEntries() {
             "Headquarters"
         }))
         .sort((a: TaxEntry, b: TaxEntry) => {
-          return parseEntryTimestamp(b.date_of_remittance) - parseEntryTimestamp(a.date_of_remittance);
+          const aDate = parseEntryTimestamp(a.date_of_remittance);
+          const bDate = parseEntryTimestamp(b.date_of_remittance);
+
+          if (bDate !== aDate) return bDate - aDate;
+          return b.id - a.id;
         });
 
       setEntries(normalized);
@@ -128,19 +145,23 @@ export default function ViewAllEntries() {
     const search = searchTerm.trim().toLowerCase();
     if (!search) return true;
 
-    const stationValue = (e.station_name || e.user_full_name || e.area_office || "").toLowerCase();
-    const taxpayerValue = (e.taxpayer_name || "").toLowerCase();
-    const channelValue = (e.payment_channel || "").toLowerCase();
-    const referenceValue = (e.remita || e.interswitch_ref || e.gokollect || "").toLowerCase();
-    const taxItemValue = (e.tax_item || "").toLowerCase();
+    const rowText = [
+      e.station_name,
+      e.user_full_name,
+      e.area_office,
+      e.taxpayer_name,
+      e.tax_item,
+      e.channel,
+      e.remita,
+      e.interswitch_ref,
+      e.gokollect,
+      e.display_reference,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-    return (
-      stationValue.includes(search) ||
-      taxpayerValue.includes(search) ||
-      channelValue.includes(search) ||
-      referenceValue.includes(search) ||
-      taxItemValue.includes(search)
-    );
+    return rowText.includes(search);
   });
 
   const exportExcel = () => {
@@ -148,7 +169,7 @@ export default function ViewAllEntries() {
       Date: e.date_of_remittance,
       Taxpayer: e.taxpayer_name,
       Reference: e.display_reference,
-      Channel: e.payment_channel,
+      Channel: e.channel,
       Amount: e.display_amount,
       Station: e.station_name,
       Source: e.source,
@@ -176,7 +197,7 @@ export default function ViewAllEntries() {
       e.date_of_remittance,
       e.taxpayer_name,
       e.display_reference,
-      e.payment_channel,
+      e.channel,
       `₦${Number(e.display_amount).toLocaleString(undefined, {
         minimumFractionDigits: 2,
       })}`,

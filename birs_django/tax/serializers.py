@@ -5,6 +5,11 @@ from .models import TaxEntry, MonthlyLeagueSnapshot, AuditLog
 class TaxEntrySerializer(serializers.ModelSerializer):
     user_full_name = serializers.CharField(source='user.full_name', read_only=True)
     channel = serializers.SerializerMethodField()
+    display_reference = serializers.SerializerMethodField()
+    display_amount = serializers.SerializerMethodField()
+    station_name = serializers.SerializerMethodField()
+    payment_channel = serializers.SerializerMethodField()
+
     class Meta:
         model = TaxEntry
         fields = [
@@ -13,7 +18,8 @@ class TaxEntrySerializer(serializers.ModelSerializer):
             'vehicle_type', 'registration_number', 'source', 
             'remita_verified', 'interswitch_verified', 'gokollect_verified', 
             'remita_amount', 'interswitch_amount', 'gokollect_amount',
-            'month', 'year', 'user_full_name', 'area_office', 'total_amount'
+            'month', 'year', 'user_full_name', 'area_office', 'total_amount', 'display_reference', 'display_amount', 'station_name', 'payment_channel',
+            
         ]
         # FIXED: Use underscore, not hyphen
         read_only_fields = (
@@ -96,6 +102,48 @@ class TaxEntrySerializer(serializers.ModelSerializer):
         elif obj.gokollect:
             return "Gokollect"
         return "-"
+    
+    def get_display_reference(self, obj):
+        return (
+            obj.remita
+            or obj.interswitch_ref
+            or obj.gokollect
+            or "N/A"
+        )
+
+
+    def get_display_amount(self, obj):
+        return float(
+            obj.remita_amount
+            or obj.interswitch_amount
+            or obj.gokollect_amount
+            or obj.total_amount
+            or 0
+        )
+
+
+    def get_station_name(self, obj):
+        if obj.user:
+            return (
+                getattr(obj.user, "full_name", None)
+                or obj.user.username
+                or obj.area_office
+            )
+
+        return obj.area_office or "Headquarters"
+
+
+    def get_payment_channel(self, obj):
+        if obj.remita:
+            return "Remita"
+
+        if obj.interswitch_ref:
+            return "Interswitch"
+
+        if obj.gokollect:
+            return "Gokollect"
+
+        return "Unknown"
     
 
     def validate_remita(self, value):

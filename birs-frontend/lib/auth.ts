@@ -6,8 +6,12 @@ export async function refreshAccessToken() {
   if (!refresh) return null;
 
   try {
+    const refreshUrl = process.env.NEXT_PUBLIC_API_URL
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`
+      : "/api/auth/token/refresh/";
+
     const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/refresh/`,
+      refreshUrl,
       {
         refresh,
       }
