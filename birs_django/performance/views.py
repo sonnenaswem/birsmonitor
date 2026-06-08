@@ -310,13 +310,6 @@ def league_table(request):
     atos = (
         CustomUser.objects
         .filter(role="ato")
-        .only(
-            "id",
-            "username",
-            "first_name",
-            "last_name",
-            "role"
-        )
     )
 
     # Aggregate revenue ONCE
@@ -654,12 +647,15 @@ def admin_dashboard(request):
                 .order_by("trunc_month")
             )
 
-        # Monthly trend from TaxEntry - ALWAYS SHOW ALL HISTORICAL DATA (unfiltered)
-        trend_entries = TaxEntry.objects.all()  
-        # Apply filters ONLY if user selected filters
+        # Monthly trend from TaxEntry - only use current-year data by default
         if from_date and to_date:
-            trend_entries = trend_entries.filter(
+            trend_entries = TaxEntry.objects.filter(
                 date_of_remittance__range=[from_date, to_date]
+            )
+        else:
+            trend_entries = TaxEntry.objects.filter(
+                date_of_remittance__year=year,
+                date_of_remittance__month__lte=month
             )
 
         monthly_trend = (
