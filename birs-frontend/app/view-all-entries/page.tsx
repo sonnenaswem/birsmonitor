@@ -72,7 +72,7 @@ export default function ViewAllEntries() {
   useEffect(() => {
     setUserRole(localStorage.getItem("role"));
     fetchEntries();
-  }, [from, to, page]);
+  }, [from, to, page, searchTerm]);
 
   const fetchEntries = async () => {
     setLoading(true);
@@ -81,6 +81,9 @@ export default function ViewAllEntries() {
 
       if (from && to) {
         url += `&from_date=${from}&to_date=${to}`;
+      }
+      if (searchTerm.trim()) {
+        url += `&search=${encodeURIComponent(searchTerm.trim())}`;
       }
       const res = await api.get(url);
       setTotalPages(Math.ceil(res.data.count / 15));
@@ -141,31 +144,10 @@ export default function ViewAllEntries() {
     }
   };
 
-  const filteredEntries = entries.filter((e) => {
-    const search = searchTerm.trim().toLowerCase();
-    if (!search) return true;
-
-    const rowText = [
-      e.station_name,
-      e.user_full_name,
-      e.area_office,
-      e.taxpayer_name,
-      e.tax_item,
-      e.channel,
-      e.remita,
-      e.interswitch_ref,
-      e.gokollect,
-      e.display_reference,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return rowText.includes(search);
-  });
+  const displayedEntries = entries;
 
   const exportExcel = () => {
-    const exportData = filteredEntries.map((e) => ({
+    const exportData = displayedEntries.map((e) => ({
       Date: e.date_of_remittance,
       Taxpayer: e.taxpayer_name,
       Reference: e.display_reference,
@@ -193,7 +175,7 @@ export default function ViewAllEntries() {
     doc.setFontSize(16);
     doc.text("Revenue Ledger", 14, 16);
 
-    const tableData = filteredEntries.map((e) => [
+    const tableData = displayedEntries.map((e) => [
       e.date_of_remittance,
       e.taxpayer_name,
       e.display_reference,
@@ -246,7 +228,10 @@ export default function ViewAllEntries() {
               value={searchTerm}
               placeholder="Search ATO station, taxpayer, or payment channel..."
               style={{ padding: "10px 15px 10px 40px", borderRadius: "10px", border: "1px solid #cbd5e1", width: "320px", fontSize: "14px" }}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
           {/* Export Buttons */}
@@ -298,10 +283,10 @@ export default function ViewAllEntries() {
           <tbody>
             {loading ? (
               <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Fetching records...</td></tr>
-            ) : filteredEntries.length === 0 ? (
+            ) : displayedEntries.length === 0 ? (
               <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
             ) : (
-              filteredEntries.map(entry => (
+              displayedEntries.map(entry => (
                 <tr key={entry.id}>
                   <td style={styles.td}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

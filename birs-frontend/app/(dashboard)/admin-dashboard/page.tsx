@@ -113,7 +113,7 @@ export default function AdminDashboard() {
     if (!effectiveRole) return;
     if (!["director", "admin", "auditor", "assistant"].includes(effectiveRole)) return;
 
-    const query = from && to ? `?from_date=${from}&to_date=${to}` : "";
+    const query = appliedFrom && appliedTo ? `?from_date=${appliedFrom}&to_date=${appliedTo}` : "";
 
     Promise.all([
       api.get(`/api/performance/dashboard/${query}`, {
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
       .catch(() => {
         setLoading(false);
       });
-  }, [effectiveRole, effectiveLoading, from, to]);
+  }, [effectiveRole, effectiveLoading, appliedFrom, appliedTo]);
   // Chart data preparation with memoization for performance
   const revenueTrendData = useMemo(() => {
     return (data?.monthly_trend || [])
