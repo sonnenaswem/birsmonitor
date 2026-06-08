@@ -1,5 +1,6 @@
 import calendar
 import logging
+import re
 from rest_framework import viewsets, status, permissions, generics
 from .models import TaxEntry, MonthlyLeagueSnapshot, PosTerminal
 from users.models import CustomUser
@@ -65,6 +66,7 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
                 "total_amount",
                 "source",
                 "area_office",
+                "station_name",
                 "user__username",
                 "user__first_name",
                 "user__last_name",
@@ -80,6 +82,39 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
                     from_date,
                     to_date
                 ]
+            )
+
+        search_query = self.request.GET.get("search")
+        if search_query:
+            search_query = search_query.strip()
+            normalized_search = search_query.lower().replace(" ", "").replace("-", "").replace("_", "")
+            channel_filter = None
+
+            if "interswitch" in normalized_search:
+                channel_filter = Q(interswitch_ref__isnull=False)
+            elif "remita" in normalized_search:
+                channel_filter = Q(remita__isnull=False)
+            elif "gokollect" in normalized_search:
+                channel_filter = Q(gokollect__isnull=False)
+
+            search_filter = (
+                Q(area_office__icontains=search_query) |
+                Q(station_name__icontains=search_query) |
+                Q(taxpayer_name__icontains=search_query) |
+                Q(tax_item__icontains=search_query) |
+                Q(remita__icontains=search_query) |
+                Q(interswitch_ref__icontains=search_query) |
+                Q(gokollect__icontains=search_query) |
+                Q(registration_number__icontains=search_query) |
+                Q(vehicle_type__icontains=search_query) |
+                Q(source__icontains=search_query) |
+                Q(user__username__icontains=search_query) |
+                Q(user__first_name__icontains=search_query) |
+                Q(user__last_name__icontains=search_query)
+            )
+
+            queryset = queryset.filter(
+                search_filter if channel_filter is None else search_filter | channel_filter
             )
 
         if not user.is_staff:
@@ -420,9 +455,9 @@ class AnalyticsSummaryView(APIView):
         }
 
         if from_date and to_date:
-            for month_num, amount in monthly_map.items():
+            for (year, month_num), amount in sorted(monthly_map.items()):
                 trend.append({
-                    "month": calendar.month_abbr[month_num] if month_num else "N/A",
+                    "month": f"{calendar.month_abbr[month_num]} {year}" if month_num else "N/A",
                     "amount": amount
                 })
         else:

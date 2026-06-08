@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 
 from django.db import IntegrityError
@@ -56,16 +57,18 @@ def process_softnet_transaction(payload):
             pass
 
     service_name = payload.get("serviceName") or "POS Revenue"
-    payment_channel = (
+    raw_payment_channel = (
         payload.get("birsPaymentChannel")
         or payload.get("paymentChannel")
         or ""
-    ).strip().upper()
+    )
+    payment_channel = re.sub(r"[\s\-_]+", "", str(raw_payment_channel).strip()).upper()
 
     print("=" * 80)
     print("SOFTNET DEBUG")
     print("REFERENCE:", payment_reference)
-    print("CHANNEL:", payment_channel)
+    print("RAW CHANNEL:", raw_payment_channel)
+    print("NORMALIZED CHANNEL:", payment_channel)
     print("AMOUNT:", amount)
     print("=" * 80)
     existing = TaxEntry.objects.filter(
@@ -107,16 +110,13 @@ def process_softnet_transaction(payload):
 
             remita_amount=(
                 amount
-                if payment_channel == "REMITA"
+                if "REMITA" in payment_channel
                 else Decimal("0.00")
             ),
 
             interswitch_amount=(
                 amount
-                if payment_channel in [
-                    "INTERSWITCH",
-                    "INTERSWITCH_PAYDIRECT",
-                ]
+                if "INTERSWITCH" in payment_channel
                 else Decimal("0.00")
             ),
             softnet_reference=payment_reference,
