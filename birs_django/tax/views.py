@@ -1,6 +1,6 @@
 import calendar
 import logging
-import re
+from django.db.models import Q
 from rest_framework import viewsets, status, permissions, generics
 from .models import TaxEntry, MonthlyLeagueSnapshot, PosTerminal
 from users.models import CustomUser
@@ -52,25 +52,6 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
         queryset = (
             TaxEntry.objects
             .select_related("user")
-            .only(
-                "id",
-                "tax_item",
-                "taxpayer_name",
-                "date_of_remittance",
-                "remita",
-                "interswitch_ref",
-                "gokollect",
-                "remita_amount",
-                "interswitch_amount",
-                "gokollect_amount",
-                "total_amount",
-                "source",
-                "area_office",
-                "station_name",
-                "user__username",
-                "user__first_name",
-                "user__last_name",
-            )
         )
 
         from_date = self.request.GET.get("from_date")

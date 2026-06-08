@@ -3,7 +3,7 @@ from .models import TaxEntry, MonthlyLeagueSnapshot, AuditLog
 
 
 class TaxEntrySerializer(serializers.ModelSerializer):
-    user_full_name = serializers.CharField(source='user.full_name', read_only=True)
+    user_full_name = serializers.SerializerMethodField()
     channel = serializers.SerializerMethodField()
     display_reference = serializers.SerializerMethodField()
     display_amount = serializers.SerializerMethodField()
@@ -40,6 +40,15 @@ class TaxEntrySerializer(serializers.ModelSerializer):
             'month': {'required': False},
             'year': {'required': False},
         }
+    
+    def get_user_full_name(self, obj):
+        if not obj.user:
+            return ""
+        return (
+            getattr(obj.user, "full_name", None)
+            or f"{obj.user.first_name} {obj.user.last_name}".strip()
+            or obj.user.username
+        )
 
     from datetime import date
     from django.conf import settings
