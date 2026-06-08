@@ -66,7 +66,8 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
                 "source",
                 "area_office",
                 "user__username",
-                "user__full_name",
+                "user__first_name",
+                "user__last_name",
             )
         )
 
