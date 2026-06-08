@@ -151,23 +151,22 @@ CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_BEAT_SCHEDULE = {
 
     "sync-gokollect-every-10-minutes": {
-        "task": "tax.periodic_tasks.periodic_gokollect_sync",
+        "task": "tax.tasks.sync_gokollect_task",
         "schedule": 600.0,
     },
 
-    # "scan-pending-softnet-every-15-minutes": {
-    #     "task": "tax.periodic_tasks.reconcile_pending_softnet_transactions",
-    #     "schedule": 900.0,
-    # },
+    "sync-softnet-every-10-min": {
+        "task": "tax.tasks.sync_softnet_task",
+        "schedule": 600.0,
+    },
 
     "detect-stale-transactions-nightly": {
         "task": "tax.periodic_tasks.detect_stale_transactions",
-        "schedule": crontab(
-            hour=0,
-            minute=0
-        ),
+        "schedule": crontab(hour=0, minute=0),
     },
 }
+
+CELERY_TIMEZONE = "Africa/Lagos"
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

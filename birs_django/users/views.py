@@ -173,18 +173,25 @@ class ATODetailView(APIView):
             count=Count('id')
         )
 
-        # 3. Last 7 Days Trend for Recharts
-        seven_days_ago = now.date() - timedelta(days=7)
+        # 3. Collection trend for the selected range or last 7 days
+        trend_entries = TaxEntry.objects.filter(user=ato)
+
+        if from_date and to_date:
+            trend_entries = trend_entries.filter(date_uploaded__date__range=[from_date, to_date])
+        else:
+            seven_days_ago = now.date() - timedelta(days=7)
+            trend_entries = trend_entries.filter(date_uploaded__date__gte=seven_days_ago)
+
         trend_data = (
-            TaxEntry.objects.filter(user=ato, date_uploaded__date__gte=seven_days_ago)
+            trend_entries
             .annotate(date=TruncDate('date_uploaded'))
             .values('date')
             .annotate(amount=Sum(total_expr))
             .order_by('date')
         )
-        
+
         activity_trend = [
-            {"date": item['date'].strftime('%b %d'), "amount": float(item['amount'] or 0)} 
+            {"date": item['date'].strftime('%b %d'), "amount": float(item['amount'] or 0)}
             for item in trend_data
         ]
 

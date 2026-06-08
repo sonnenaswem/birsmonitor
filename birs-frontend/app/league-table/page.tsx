@@ -208,12 +208,12 @@ export default function LeagueTablePage() {
                   <div style={styles.rankCircle(i)}>{i + 1}</div>
                 </td>
                 <td style={{ ...styles.td, fontWeight: "700" }}>{d.username}</td>
-                <td style={styles.td}>₦{Number(d.target).toLocaleString()}</td>
-                <td style={styles.td}>₦{Number(d.remita).toLocaleString()}</td>
-                <td style={styles.td}>₦{Number(d.interswitch).toLocaleString()}</td>
-                <td style={styles.td}>₦{Number(d.gokollect).toLocaleString()}</td>
+                <td style={styles.td}>₦{Number(d.target || 0).toLocaleString()}</td>
+                <td style={styles.td}>₦{Number(d.remita || 0).toLocaleString()}</td>
+                <td style={styles.td}>₦{Number(d.interswitch || 0).toLocaleString()}</td>
+                <td style={styles.td}>₦{Number(d.gokollect || 0).toLocaleString()}</td>
                 <td style={{ ...styles.td, fontWeight: "800", color: "#052e16" }}>
-                  ₦{Number(d.total).toLocaleString()}
+                  ₦{Number(d.total || 0).toLocaleString()}
                 </td>
                 <td style={styles.td}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

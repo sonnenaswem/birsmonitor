@@ -31,13 +31,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token["role"] = user.role
+        token["role"] = getattr(user, "role", "") or ""
+        token["full_name"] = getattr(user, "full_name", "") or ""
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        data["role"] = self.user.role
-        data["full_name"] = self.user.full_name
+        data["role"] = getattr(self.user, "role", "") or ""
+        data["full_name"] = getattr(self.user, "full_name", "") or ""
 
         if not hasattr(self.user, "role"):
             raise serializers.ValidationError("User role not found")
