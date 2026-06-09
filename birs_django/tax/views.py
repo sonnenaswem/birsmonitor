@@ -649,6 +649,64 @@ class UserTaxEntriesView(generics.ListAPIView):
     def get_queryset(self):
         return TaxEntry.objects.filter(user=self.request.user).order_by('-date_of_remittance')
 
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def lookup_payment_reference(request):
+    reference = request.GET.get("reference", "").strip()
+    if not reference:
+        return Response({"error": "Reference is required"}, status=400)
+
+    # Check duplicate before even calling Softnet
+    if TaxEntry.objects.filter(remita=reference).exists():
+        return Response(
+            {"error": "This Remita reference has already been submitted by your office."},
+            status=400
+        )
+    if TaxEntry.objects.filter(interswitch_ref=reference).exists():
+        return Response(
+            {"error": "This Interswitch reference has already been submitted by your office."},
+            status=400
+        )
+
+    import requests as http_requests
+    url = f"{settings.SOFTNET_BASE_URL}/ato/by-payment-reference/{reference}"
+    headers = {"X-Client-Id": settings.SOFTNET_CLIENT_ID}
+
+    try:
+        resp = http_requests.get(url, headers=headers, timeout=15)
+
+        if resp.status_code == 404:
+            return Response(
+                {"error": "Reference not found. Please check the number and try again."},
+                status=404
+            )
+
+        if resp.status_code != 200:
+            return Response(
+                {"error": f"Payment gateway returned an error. Please try again later."},
+                status=502
+            )
+
+        data = resp.json().get("data", {})
+
+        return Response({
+            "found": True,
+            "taxpayer_name": data.get("customerName") or "Unknown",
+            "amount": float(data.get("amount") or 0),
+            "service_name": data.get("serviceName") or data.get("itemCode") or "",
+            "payment_channel": (data.get("birsPaymentChannel") or "").upper(),
+            "date": None,  # Softnet by-reference doesn't return date reliably
+            "raw": data,
+        })
+
+    except Exception as e:
+        logger.exception(f"Softnet lookup failed for reference {reference}: {str(e)}")
+        return Response(
+            {"error": "Could not reach the payment gateway. Please try again."},
+            status=503
+        )
+
 from django.http import JsonResponse
 
 def ssl_debug(request):

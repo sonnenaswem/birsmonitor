@@ -356,3 +356,34 @@ class ExternalSyncLog(models.Model):
 
     def __str__(self):
         return f"{self.provider} - {self.terminal_id}"
+
+@property
+def payment_channel(self):
+    """
+    Normalized source channel.
+
+    Returns:
+        remita
+        interswitch
+        gokollect
+        softnet
+    """
+
+    if self.external_source == "gokollect":
+        return "gokollect"
+
+    if self.external_source == "softnet":
+        channel = (
+            (self.softnet_data or {})
+            .get("birsPaymentChannel")
+        )
+
+        if channel == "REMITA":
+            return "remita"
+
+        if channel == "INTERSWITCH_PAYDIRECT":
+            return "interswitch"
+
+        return "softnet"
+
+    return self.external_source

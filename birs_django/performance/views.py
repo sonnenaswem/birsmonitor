@@ -365,9 +365,13 @@ def league_table(request):
         }
 
     else:
+        now = timezone.now()
+        effective_month = int(month) if month else now.month
+        effective_year = int(year) if year else now.year
+
         target_queryset = target_queryset.filter(
-            month=month,
-            year=year
+            month=effective_month,
+            year=effective_year
         )
 
         target_map = {
@@ -406,6 +410,10 @@ def league_table(request):
         data.append({
             "user_id": ato.id,
             "username": ato.username,
+            "station_name": (
+                getattr(ato, "area_office", None)
+                or ato.username
+            ),
             "target": target_val,
             "remita": remita_total,
             "interswitch": interswitch_total,
