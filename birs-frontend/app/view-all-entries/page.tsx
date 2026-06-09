@@ -229,8 +229,13 @@ export default function ViewAllEntries() {
               placeholder="Search ATO station, taxpayer, or payment channel..."
               style={{ padding: "10px 15px 10px 40px", borderRadius: "10px", border: "1px solid #cbd5e1", width: "320px", fontSize: "14px" }}
               onChange={(e) => {
-                setSearchTerm(e.target.value);
+                const val = e.target.value;
                 setPage(1);
+                // Debounce — only search after user stops typing for 400ms
+                clearTimeout((window as any)._searchTimer);
+                (window as any)._searchTimer = setTimeout(() => {
+                  setSearchTerm(val);
+                }, 400);
               }}
             />
           </div>

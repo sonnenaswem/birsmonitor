@@ -106,19 +106,25 @@ export default function AtoDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {data?.records?.length > 0 ? data.records.map((rec: any, i: number) => (
+                {data?.records?.length > 0 ? data.records.map((rec: any, i: number) => {
+                  const remita = Number(rec.remita_amount || 0);
+                  const interswitch = Number(rec.interswitch_amount || 0);
+                  const gokollect = Number(rec.gokollect_amount || 0);
+                  const total = remita + interswitch + gokollect;
+                  return (
                   <tr key={i}>
-                    <td style={styles.td}>{rec.date_uploaded}</td>
-                    <td style={styles.td}>{rec.remita_amount?.toLocaleString()}</td>
-                    <td style={styles.td}>{rec.interswitch_amount?.toLocaleString()}</td>
-                    <td style={styles.td}>{rec.gokollect_amount?.toLocaleString()}</td>
+                    <td style={styles.td}>{rec.date_of_remittance}</td>
+                    <td style={styles.td}>₦{remita.toLocaleString()}</td>
+                    <td style={styles.td}>₦{interswitch.toLocaleString()}</td>
+                    <td style={styles.td}>₦{gokollect.toLocaleString()}</td>
                     <td style={{ ...styles.td, fontWeight: "bold", color: "#0f172a" }}>
-                        {(rec.remita_amount + rec.interswitch_amount + rec.gokollect_amount).toLocaleString()}
+                        ₦{total.toLocaleString()}
                     </td>
                   </tr>
-                )) : (
+                );
+                }) : (
                   <tr>
-                    <td colSpan={4} style={{ ...styles.td, textAlign: "center", padding: "40px", color: "#94a3b8" }}>
+                    <td colSpan={5} style={{ ...styles.td, textAlign: "center", padding: "40px", color: "#94a3b8" }}>
                         No records found for the selected period.
                     </td>
                   </tr>

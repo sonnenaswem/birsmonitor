@@ -106,10 +106,25 @@ class TaxEntrySerializer(serializers.ModelSerializer):
     def get_channel(self, obj):
         if obj.remita:
             return "Remita"
-        elif obj.interswitch_ref:
+        if obj.interswitch_ref:
             return "Interswitch"
-        elif obj.gokollect:
+        if obj.gokollect:
             return "Gokollect"
+
+        if obj.external_source == "softnet":
+            channel = (
+                (obj.softnet_data or {}).get("birsPaymentChannel", "")
+                or ""
+            ).upper()
+            if channel == "REMITA":
+                return "Remita"
+            if "INTERSWITCH" in channel:
+                return "Interswitch"
+            if obj.remita_amount and obj.remita_amount > 0:
+                return "Remita"
+            if obj.interswitch_amount and obj.interswitch_amount > 0:
+                return "Interswitch"
+
         return "-"
     
     def get_display_reference(self, obj):
@@ -117,6 +132,7 @@ class TaxEntrySerializer(serializers.ModelSerializer):
             obj.remita
             or obj.interswitch_ref
             or obj.gokollect
+            or obj.softnet_reference
             or "N/A"
         )
 

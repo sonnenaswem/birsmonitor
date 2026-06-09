@@ -100,7 +100,7 @@ ATOS = [
         "email": "atokatsinaala_ghl@mailhost.com",
         "first_name": "ATO",
         "last_name": "KATSINA ALA",
-        "gokollect_code": "GHL",
+        "gokollect_code": "GHKA",
         "role": "ato",
         "area_office": "ATO KATSINA ALA",
         "password": "pass132"
