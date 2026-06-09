@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @shared_task
 def sync_gokollect_task():
 
-    sync_gokollect_transactions()
+    sync_gokollect_transactions(limit_pages=10)
 
     logger.info(
         "GoKollect sync complete"

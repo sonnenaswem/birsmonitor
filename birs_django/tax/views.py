@@ -80,7 +80,6 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
 
             search_filter = (
                 Q(area_office__icontains=search_query) |
-                Q(station_name__icontains=search_query) |
                 Q(taxpayer_name__icontains=search_query) |
                 Q(tax_item__icontains=search_query) |
                 Q(remita__icontains=search_query) |
@@ -94,9 +93,10 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
                 Q(user__last_name__icontains=search_query)
             )
 
-            queryset = queryset.filter(
-                search_filter if channel_filter is None else search_filter | channel_filter
-            )
+            if channel_filter is not None:
+                queryset = queryset.filter(search_filter | channel_filter)
+            else:
+                queryset = queryset.filter(search_filter)
 
         if not user.is_staff:
             queryset = queryset.filter(
@@ -573,70 +573,72 @@ class ATOItemBreakdownView(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def tax_item_aggregate(request):
-    """
-    Returns total revenue grouped by tax item.
-    Supports optional date filtering.
-    """
     try:
         from_date = request.GET.get("from_date")
         to_date = request.GET.get("to_date")
-
         now = timezone.now()
 
-        queryset = TaxEntry.objects.filter(
-            date_of_remittance__month=now.month,
-            date_of_remittance__year=now.year,
-        )
-
         if from_date and to_date:
-            queryset = queryset.filter(
+            base_qs = TaxEntry.objects.filter(
                 date_of_remittance__range=[from_date, to_date]
             )
-
-        # Build data safely - avoid arithmetic on nullable fields
-        data = (
-            queryset.values("tax_item")
-            .annotate(
-                remita_sum=Coalesce(
-                    Sum("remita_amount"),
-                    Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                interswitch_sum=Coalesce(
-                    Sum("interswitch_amount"),
-                    Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                gokollect_sum=Coalesce(
-                    Sum("gokollect_amount"),
-                    Value(0, output_field=DecimalField()), output_field=DecimalField()),
+        else:
+            base_qs = TaxEntry.objects.filter(
+                date_of_remittance__month=now.month,
+                date_of_remittance__year=now.year,
             )
-            .order_by("-tax_item")
+
+        amount_expr = (
+            Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
+            Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
+            Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField())
+        )
+
+        # Non-GoKollect: group by tax_item
+        non_gokollect = (
+            base_qs
+            .exclude(external_source="gokollect")
+            .values("tax_item")
+            .annotate(total=amount_expr)
+            .order_by("-total")
+        )
+
+        # GoKollect: group by area_office
+        gokollect = (
+            base_qs
+            .filter(external_source="gokollect")
+            .values("area_office")
+            .annotate(total=amount_expr)
+            .order_by("-total")
         )
 
         result = []
 
-        for item in data:
-            remita = float(item.get("remita_sum") or 0)
-            interswitch = float(item.get("interswitch_sum") or 0)
-            gokollect = float(item.get("gokollect_sum") or 0)
-            total = remita + interswitch + gokollect
+        for item in non_gokollect:
+            total = float(item["total"] or 0)
+            if total > 0:
+                result.append({
+                    "tax_item": item["tax_item"] or "Unknown",
+                    "total": total,
+                })
 
-            result.append({
-                "tax_item": item["tax_item"],
-                "total": total,
-            })
+        for item in gokollect:
+            total = float(item["total"] or 0)
+            if total > 0:
+                result.append({
+                    "tax_item": item["area_office"] or "GoKollect Unit",
+                    "total": total,
+                })
 
-        result = sorted(
-            result,
-            key=lambda x: x["total"],
-            reverse=True
-        )
+        result = sorted(result, key=lambda x: x["total"], reverse=True)
 
         return Response(result)
-    
+
     except Exception as e:
         print(f"🔥 TAX AGGREGATE ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
-        return Response([], status=200)  # Return empty array on error, not 500
-
+        return Response([], status=200)
 
 
 class UserTaxEntriesView(generics.ListAPIView):

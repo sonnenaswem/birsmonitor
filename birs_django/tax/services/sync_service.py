@@ -20,7 +20,7 @@ ALLOWED_CODES = {
     "GHID",
     "GHAL",
     "GHIG",
-    "GHL",
+    "GHKA",
     "GHBU",
     "GHMA",
     "GHOB",
