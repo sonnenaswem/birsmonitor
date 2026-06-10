@@ -123,7 +123,11 @@ def performance_summary(request):
     
     recent_entries = TaxEntry.objects.filter(user=user).order_by('-date_of_remittance')[:10]
     record_data = [{
-        "date_of_remittance": rec.date_of_remittance.strftime("%Y-%m-%d"),
+        "date_of_remittance": (
+            rec.date_of_remittance.strftime("%Y-%m-%d")
+            if rec.date_of_remittance
+            else None
+        ),
         "remita_amount": float(rec.remita_amount or 0),
         "interswitch_amount": float(rec.interswitch_amount or 0),
         "gokollect_amount": float(rec.gokollect_amount or 0)
