@@ -30,7 +30,7 @@ export default function ManageUsers() {
 
   const handleRoleChange = async (userId: number, newRole: string) => {
     try {
-      await api.patch(`/users/${userId}/manage/`, { action: "change_role", value: newRole });
+      await api.patch(`/api/users/${userId}/manage/`, { action: "change_role", value: newRole });
       fetchUsers();
     } catch (err: any) {
       alert(err.response?.data?.error || "Update failed");
@@ -53,7 +53,7 @@ export default function ManageUsers() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
-      await api.patch(`/users/set-target/`, { 
+      await api.patch(`/api/users/set-target/`, { 
         user: selectedUser.id,
         month: new Date().getMonth() + 1,
         year: new Date().getFullYear(),
