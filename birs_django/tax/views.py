@@ -404,6 +404,31 @@ class AnalyticsSummaryView(APIView):
                 Value(0, output_field=DecimalField()), output_field=DecimalField()),
         )
 
+        print(
+            "REMITA:",
+            current_entries.filter(
+                softnet_data__birsPaymentChannel="REMITA"
+            ).aggregate(
+                total=Sum("total_amount")
+            )
+        )
+
+        print(
+            "INTERSWITCH:",
+            current_entries.filter(
+                softnet_data__birsPaymentChannel="INTERSWITCH_PAYDIRECT"
+            ).aggregate(
+                total=Sum("interswitch_amount")
+            )
+        )
+
+        print(
+            "GOKOLLECT:",
+            current_entries.aggregate(
+                total=Sum("gokollect_amount")
+            )
+        )
+
         grand_total = float(totals["remita"] + totals["interswitch"] + totals["gokollect"])
 
         # MONTHLY TREND (optimized: single grouped query)
