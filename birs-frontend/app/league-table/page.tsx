@@ -102,8 +102,36 @@ export default function LeagueTablePage() {
 
   return (
     <DashboardLayout>
+      <style>{`
+        @media (max-width: 768px) {
+          .league-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            padding: 20px !important;
+          }
+          .league-summary {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .league-table-wrapper {
+            max-height: 70vh !important;
+          }
+          .league-table-wrapper table {
+            min-width: 900px !important;
+            font-size: 12px !important;
+          }
+          .league-table-wrapper th,
+          .league-table-wrapper td {
+            padding: 10px 8px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .league-search-input {
+            max-width: 100% !important;
+          }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{
+      <div className="league-header" style={{
         background: "linear-gradient(135deg, #052e16 0%, #064e3b 100%)",
         padding: "28px 32px",
         borderRadius: "16px",
@@ -189,7 +217,7 @@ export default function LeagueTablePage() {
       </div>
 
       {/* Summary bar */}
-      <div style={{
+      <div className="league-summary" style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
         gap: "12px",
@@ -218,7 +246,7 @@ export default function LeagueTablePage() {
       </div>
 
       {/* Search */}
-      <div style={{ marginBottom: "16px", position: "relative", maxWidth: "360px" }}>
+      <div className="league-search-input" style={{ marginBottom: "16px", position: "relative", maxWidth: "360px" }}>
         <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
         <input
           type="text"
@@ -238,7 +266,7 @@ export default function LeagueTablePage() {
       </div>
 
       {/* Table */}
-      <div style={{
+      <div className="league-table-wrapper" style={{
         background: "white",
         borderRadius: "16px",
         border: "1px solid #e2e8f0",
@@ -257,11 +285,11 @@ export default function LeagueTablePage() {
                 {["Rank", "ATO Station", "Target", "Remita", "Interswitch", "GoKollect", "Total Revenue", "% Achieved", ""].map((h) => (
                   <th key={h} style={{
                     padding: "16px 18px",
-                    background: "#f8fafc",
+                    background: "linear-gradient(135deg, #052e16 0%, #064e3b 100%)",
+                    color: "white",
                     textAlign: "left",
                     fontSize: "11px",
                     fontWeight: 700,
-                    color: "#64748b",
                     borderBottom: "2px solid #f1f5f9",
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
@@ -320,22 +348,22 @@ export default function LeagueTablePage() {
                     </td>
 
                     {/* Target */}
-                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#475569" }}>
+                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#475569", fontWeight: 700 }}>
                       {formatCurrency(d.target)}
                     </td>
 
                     {/* Remita */}
-                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#475569" }}>
+                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#059669", fontWeight: 700 }}>
                       {formatCurrency(d.remita)}
                     </td>
 
                     {/* Interswitch */}
-                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#475569" }}>
+                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#2563eb", fontWeight: 700 }}>
                       {formatCurrency(d.interswitch)}
                     </td>
 
                     {/* GoKollect */}
-                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#475569" }}>
+                    <td style={{ padding: "16px 18px", borderBottom: "1px solid #f1f5f9", fontSize: "14px", color: "#d97706", fontWeight: 700 }}>
                       {formatCurrency(d.gokollect)}
                     </td>
 
