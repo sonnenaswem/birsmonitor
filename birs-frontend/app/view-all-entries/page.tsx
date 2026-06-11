@@ -151,7 +151,7 @@ export default function ViewAllEntries() {
       Date: e.date_of_remittance,
       Taxpayer: e.taxpayer_name,
       Reference: e.display_reference,
-      Channel: e.channel,
+      Channel: e.payment_channel,
       Amount: e.display_amount,
       Station: e.station_name,
       Source: e.source,
@@ -327,15 +327,15 @@ export default function ViewAllEntries() {
                         fontSize: "12px",
                         fontWeight: "700",
                         background:
-                          entry.payment_channel === "Remita"
+                          entry.payment_channel?.toLowerCase() === "remita"
                             ? "#ecfdf5"
-                            : entry.payment_channel === "Interswitch"
+                            : entry.payment_channel?.toLowerCase() === "interswitch"
                             ? "#eff6ff"
                             : "#fef3c7",
                         color:
-                          entry.payment_channel === "Remita"
+                          entry.payment_channel?.toLowerCase() === "remita"
                             ? "#059669"
-                            : entry.payment_channel === "Interswitch"
+                            : entry.payment_channel?.toLowerCase() === "interswitch"
                             ? "#2563eb"
                             : "#d97706",
                       }}

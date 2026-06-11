@@ -693,6 +693,11 @@ def lookup_payment_reference(request):
             {"error": "This Interswitch reference has already been submitted by your office."},
             status=400
         )
+    if TaxEntry.objects.filter(softnet_reference=reference).exists():
+        return Response(
+            {"error": "This payment reference has already been recorded via the POS terminal sync. No need to submit it manually."},
+            status=400
+        )
 
     import requests as http_requests
     url = f"{settings.SOFTNET_BASE_URL}/ato/by-payment-reference/{reference}"
