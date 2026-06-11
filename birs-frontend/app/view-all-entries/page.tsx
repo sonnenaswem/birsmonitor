@@ -211,8 +211,42 @@ export default function ViewAllEntries() {
 
   return (
     <DashboardLayout>
+      <style>{`
+        @media (max-width: 768px) {
+          .ledger-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 16px !important;
+          }
+          .ledger-actions {
+            width: 100% !important;
+            flex-wrap: wrap !important;
+          }
+          .ledger-search {
+            width: 100% !important;
+          }
+          .ledger-table-wrapper {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+          }
+          .ledger-table-wrapper table {
+            min-width: 900px !important;
+            font-size: 12px !important;
+          }
+          .ledger-table-wrapper th,
+          .ledger-table-wrapper td {
+            padding: 8px !important;
+          }
+          .ledger-date-filters {
+            flex-wrap: wrap !important;
+          }
+          .ledger-date-filters input {
+            flex: 1 1 45% !important;
+          }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "30px" }}>
+      <div className="ledger-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "30px" }}>
         <div>
           <h1 style={{ fontSize: "28px", fontWeight: "800", color: "#052e16", margin: 0 }}>Revenue Ledger</h1>
           <p style={{ color: "#64748b", margin: 0, fontSize: "14px" }}>
@@ -220,9 +254,9 @@ export default function ViewAllEntries() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div className="ledger-actions" style={{ display: "flex", gap: "12px" }}>
           {/* Search */}
-          <div style={{ position: "relative" }}>
+          <div className="ledger-search" style={{ position: "relative" }}>
             <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
             <input
               value={searchTerm}
@@ -250,7 +284,7 @@ export default function ViewAllEntries() {
       </div>
 
       {/* Date Filter */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div className="ledger-date-filters" style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         <input
           type="date"
           value={from}
@@ -271,132 +305,134 @@ export default function ViewAllEntries() {
       </div>
 
       {/* Table */}
-      <div style={styles.card}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>DATE</th>
-              <th style={styles.th}>TAXPAYER / REVENUE ITEM</th>
-              <th style={styles.th}>REFERENCE</th>
-              <th style={{ ...styles.th, textAlign: "left" }}>CHANNEL</th>
-              <th style={styles.th}>AMOUNT</th>
-              <th style={styles.th}>ATO STATION</th>
-              <th style={styles.th}>SOURCE</th>
-              <th style={styles.th}>ACTION</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Fetching records...</td></tr>
-            ) : displayedEntries.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
-            ) : (
-              displayedEntries.map(entry => (
-                <tr key={entry.id}>
-                  <td style={styles.td}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Clock size={14} color="#94a3b8" />
-                      {entry.date_of_remittance}
-                    </div>
-                  </td>
-                  {/* TAXPAYER / ITEM */}
-                  <td style={styles.td}>
-                    <div style={{ fontWeight: "700" }}>{entry.taxpayer_name || "N/A"}</div>
-                    <div style={{ fontSize: "12px", color: "#64748b" }}>{entry.tax_item}</div>
-                  </td>
+      <div className="ledger-table-wrapper" style={{ overflowX: "auto" }}>
+        <div style={styles.card}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>DATE</th>
+                <th style={styles.th}>TAXPAYER / REVENUE ITEM</th>
+                <th style={styles.th}>REFERENCE</th>
+                <th style={{ ...styles.th, textAlign: "left" }}>CHANNEL</th>
+                <th style={styles.th}>AMOUNT</th>
+                <th style={styles.th}>ATO STATION</th>
+                <th style={styles.th}>SOURCE</th>
+                <th style={styles.th}>ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Fetching records...</td></tr>
+              ) : displayedEntries.length === 0 ? (
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
+              ) : (
+                displayedEntries.map(entry => (
+                  <tr key={entry.id}>
+                    <td style={styles.td}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Clock size={14} color="#94a3b8" />
+                        {entry.date_of_remittance}
+                      </div>
+                    </td>
+                    {/* TAXPAYER / ITEM */}
+                    <td style={styles.td}>
+                      <div style={{ fontWeight: "700" }}>{entry.taxpayer_name || "N/A"}</div>
+                      <div style={{ fontSize: "12px", color: "#64748b" }}>{entry.tax_item}</div>
+                    </td>
 
-                  {/* REFERENCE */}
-                  <td style={styles.td}>
-                    <code style={{ background: "#f1f5f9", padding: "4px 8px", borderRadius: "6px", fontSize: "13px" }}>
-                      {entry.display_reference}
-                    </code>
-                  </td>
+                    {/* REFERENCE */}
+                    <td style={styles.td}>
+                      <code style={{ background: "#f1f5f9", padding: "4px 8px", borderRadius: "6px", fontSize: "13px" }}>
+                        {entry.display_reference}
+                      </code>
+                    </td>
 
-                  {/* CHANNEL */}
-                  <td
-                    style={{
-                      ...styles.td,
-                      textAlign: "left",
-                      verticalAlign: "middle"
-                    }}
-                  >
-                    <span
+                    {/* CHANNEL */}
+                    <td
                       style={{
-                        padding: "6px 10px",
-                        borderRadius: "999px",
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        background:
-                          entry.payment_channel?.toLowerCase() === "remita"
-                            ? "#ecfdf5"
-                            : entry.payment_channel?.toLowerCase() === "interswitch"
-                            ? "#eff6ff"
-                            : "#fef3c7",
-                        color:
-                          entry.payment_channel?.toLowerCase() === "remita"
-                            ? "#059669"
-                            : entry.payment_channel?.toLowerCase() === "interswitch"
-                            ? "#2563eb"
-                            : "#d97706",
+                        ...styles.td,
+                        textAlign: "left",
+                        verticalAlign: "middle"
                       }}
                     >
-                      {entry.payment_channel}
-                    </span>
-                  </td>
-
-                  {/* AMOUNT */}
-                  <td style={styles.td}>
-                    <span style={{ fontWeight: "800", color: "#052e16" }}>
-                      ₦{entry.display_amount?.toLocaleString(undefined, {
-                        minimumFractionDigits: 2
-                      })}
-                    </span>
-                  </td>
-
-                  {/* ATO STATION */}
-                  <td style={styles.td}>
-                    <span style={{ fontWeight: "600", color: "#475569" }}>
-                      {entry.station_name}
-                    </span>
-                  </td>
-                  {/* SOURCE */}
-                  <td style={styles.td}>
-                    <span style={styles.badge(entry.source)}>
-                      {entry.source === "POS" ? <ShieldCheck size={12} /> : <AlertCircle size={12} />}
-                      {entry.source}
-                    </span>
-                  </td>
-
-                  {/* ACTION */}
-                  <td style={styles.td}>
-                    {(userRole === "admin" || userRole === "auditor") && entry.source === "Manual" ? (
-                      <button
-                        onClick={() => handleDelete(entry.id)}
+                      <span
                         style={{
-                          border: "none",
-                          background: "#fef2f2",
-                          color: "#ef4444",
-                          padding: "8px",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                          transition: "0.2s"
+                          padding: "6px 10px",
+                          borderRadius: "999px",
+                          fontSize: "12px",
+                          fontWeight: "700",
+                          background:
+                            entry.payment_channel?.toLowerCase() === "remita"
+                              ? "#ecfdf5"
+                              : entry.payment_channel?.toLowerCase() === "interswitch"
+                              ? "#eff6ff"
+                              : "#fef3c7",
+                          color:
+                            entry.payment_channel?.toLowerCase() === "remita"
+                              ? "#059669"
+                              : entry.payment_channel?.toLowerCase() === "interswitch"
+                              ? "#2563eb"
+                              : "#d97706",
                         }}
-                        onMouseOver={(e) => (e.currentTarget.style.background = "#fee2e2")}
-                        onMouseOut={(e) => (e.currentTarget.style.background = "#fef2f2")}
                       >
-                        <Trash2 size={18} />
-                      </button>
-                    ) : (
-                      <span style={{ color: "#cbd5e1", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>
-                        Locked
+                        {entry.payment_channel}
                       </span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    </td>
+
+                    {/* AMOUNT */}
+                    <td style={styles.td}>
+                      <span style={{ fontWeight: "800", color: "#052e16" }}>
+                        ₦{entry.display_amount?.toLocaleString(undefined, {
+                          minimumFractionDigits: 2
+                        })}
+                      </span>
+                    </td>
+
+                    {/* ATO STATION */}
+                    <td style={styles.td}>
+                      <span style={{ fontWeight: "600", color: "#475569" }}>
+                        {entry.station_name}
+                      </span>
+                    </td>
+                    {/* SOURCE */}
+                    <td style={styles.td}>
+                      <span style={styles.badge(entry.source)}>
+                        {entry.source === "POS" ? <ShieldCheck size={12} /> : <AlertCircle size={12} />}
+                        {entry.source}
+                      </span>
+                    </td>
+
+                    {/* ACTION */}
+                    <td style={styles.td}>
+                      {(userRole === "admin" || userRole === "auditor") && entry.source === "Manual" ? (
+                        <button
+                          onClick={() => handleDelete(entry.id)}
+                          style={{
+                            border: "none",
+                            background: "#fef2f2",
+                            color: "#ef4444",
+                            padding: "8px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            transition: "0.2s"
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.background = "#fee2e2")}
+                          onMouseOut={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      ) : (
+                        <span style={{ color: "#cbd5e1", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>
+                          Locked
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
       {/* Pagination */}
       <div
