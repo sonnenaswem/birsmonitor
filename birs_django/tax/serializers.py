@@ -159,16 +159,7 @@ class TaxEntrySerializer(serializers.ModelSerializer):
 
 
     def get_payment_channel(self, obj):
-        if obj.remita:
-            return "Remita"
-
-        if obj.interswitch_ref:
-            return "Interswitch"
-
-        if obj.gokollect:
-            return "Gokollect"
-
-        return "Unknown"
+        return self.get_channel(obj)
     
 
     def validate_remita(self, value):
