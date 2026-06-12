@@ -30,6 +30,9 @@ export default function ATODetailPage() {
 
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
+
 
   // 🔥 FETCH ATO DETAIL WITH FILTER
   useEffect(() => {
@@ -37,8 +40,8 @@ export default function ATODetailPage() {
 
     let url = `/api/users/ato/${userId}/`;
 
-    if (from && to) {
-      url += `?from_date=${from}&to_date=${to}`;
+    if (appliedFrom && appliedTo) {
+      url += `?from_date=${appliedFrom}&to_date=${appliedTo}`;
     }
     setLoading(true);
     api.get(url)
@@ -57,7 +60,7 @@ export default function ATODetailPage() {
       })
       .finally(() => setLoading(false));
 
-  }, [id, from, to]);
+  }, [id, appliedFrom, appliedTo]);
 
 
   if (loading) return <DashboardLayout><div style={{padding: "40px", textAlign: "center"}}>Loading Station Intelligence...</div></DashboardLayout>;
@@ -84,22 +87,74 @@ export default function ATODetailPage() {
         <ArrowLeft size={18} /> Back to League Table
       </button>
       {/* 🔥 DATE FILTER */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div style={{
+        display: "flex",
+        gap: "10px",
+        marginBottom: "20px",
+        alignItems: "center",
+        flexWrap: "wrap",
+        background: "white",
+        padding: "16px 20px",
+        borderRadius: "12px",
+        border: "1px solid #e2e8f0",
+      }}>
+        <Calendar size={16} color="#64748b" />
         <input
           type="date"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
+          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px" }}
         />
+        <span style={{ color: "#94a3b8" }}>to</span>
         <input
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
+          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px" }}
         />
+        <button
+          onClick={() => { setAppliedFrom(from); setAppliedTo(to); }}
+          disabled={!from || !to}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            background: from && to ? "#047857" : "#e2e8f0",
+            color: from && to ? "white" : "#94a3b8",
+            fontWeight: 600,
+            fontSize: "13px",
+            cursor: from && to ? "pointer" : "not-allowed",
+          }}
+        >
+          Apply
+        </button>
+        {(appliedFrom || appliedTo) && (
+          <button
+            onClick={() => { setFrom(""); setTo(""); setAppliedFrom(""); setAppliedTo(""); }}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              border: "1px solid #fecaca",
+              background: "#fef2f2",
+              color: "#991b1b",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            Clear
+          </button>
+        )}
+        <span style={{ marginLeft: "auto", fontSize: "13px", fontWeight: 600, color: "#065f46", background: "#ecfdf5", padding: "6px 12px", borderRadius: "999px" }}>
+          {appliedFrom && appliedTo
+            ? `Filtered: ${appliedFrom} — ${appliedTo}`
+            : `Showing: Current Month`}
+        </span>
       </div>
       {/* Header Info */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
         <div>
-          <h1 style={{ fontSize: "32px", fontWeight: "900", color: "#052e16", margin: 0 }}>{data.username}</h1>
+          <h1 style={{ fontSize: "32px", fontWeight: "900", color: "#052e16", margin: 0 }}>{data.station_name || data.area_office || data.username}</h1>
           <p style={{ color: "#64748b", margin: 0 }}>Station Performance & Audit Intelligence</p>
         </div>
         <div style={{ textAlign: "right" }}>

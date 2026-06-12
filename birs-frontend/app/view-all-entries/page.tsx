@@ -48,6 +48,8 @@ export default function ViewAllEntries() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
   const [totalPages, setTotalPages] = useState(1);
 
   const parseEntryTimestamp = (value?: string | null) => {
@@ -72,15 +74,15 @@ export default function ViewAllEntries() {
   useEffect(() => {
     setUserRole(localStorage.getItem("role"));
     fetchEntries();
-  }, [from, to, page, searchTerm]);
+  }, [appliedFrom, appliedTo, page, searchTerm]);
 
   const fetchEntries = async () => {
     setLoading(true);
     try {
       let url = `/api/tax/entries/?page=${page}&page_size=15`;
 
-      if (from && to) {
-        url += `&from_date=${from}&to_date=${to}`;
+      if (appliedFrom && appliedTo) {
+        url += `&from_date=${appliedFrom}&to_date=${appliedTo}`;
       }
       if (searchTerm.trim()) {
         url += `&search=${encodeURIComponent(searchTerm.trim())}`;
@@ -284,24 +286,65 @@ export default function ViewAllEntries() {
       </div>
 
       {/* Date Filter */}
-      <div className="ledger-date-filters" style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div className="ledger-date-filters" style={{ display: "flex", gap: "10px", marginBottom: "20px", alignItems: "center" }}>
         <input
           type="date"
           value={from}
-          onChange={(e) => {
-            setFrom(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setFrom(e.target.value)}
+          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px" }}
         />
 
         <input
           type="date"
           value={to}
-          onChange={(e) => {
-            setTo(e.target.value);
+          onChange={(e) => setTo(e.target.value)}
+          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+        />
+
+        <button
+          onClick={() => {
+            setAppliedFrom(from);
+            setAppliedTo(to);
             setPage(1);
           }}
-        />
+          disabled={!from || !to}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            background: from && to ? "#047857" : "#e2e8f0",
+            color: from && to ? "white" : "#94a3b8",
+            fontWeight: 600,
+            fontSize: "13px",
+            cursor: from && to ? "pointer" : "not-allowed",
+          }}
+        >
+          Apply
+        </button>
+
+        {(appliedFrom || appliedTo) && (
+          <button
+            onClick={() => {
+              setFrom("");
+              setTo("");
+              setAppliedFrom("");
+              setAppliedTo("");
+              setPage(1);
+            }}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              border: "1px solid #fecaca",
+              background: "#fef2f2",
+              color: "#991b1b",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Table */}

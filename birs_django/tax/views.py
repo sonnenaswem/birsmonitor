@@ -451,14 +451,27 @@ class AnalyticsSummaryView(APIView):
             .order_by("month")
         )
 
-        monthly_map = {
-            (row["year"], row["month"]) : float(
-                row["remita"] +
-                row["interswitch"] +
-                row["gokollect"]
-            )
-            for row in monthly_data
-        }
+        if from_date and to_date:
+
+            monthly_map = {
+                (row["year"], row["month"]): float(
+                    row["remita"] +
+                    row["interswitch"] +
+                    row["gokollect"]
+                )
+                for row in monthly_data
+            }
+
+        else:
+
+            monthly_map = {
+                row["month"]: float(
+                    row["remita"] +
+                    row["interswitch"] +
+                    row["gokollect"]
+                )
+                for row in monthly_data
+            }
 
         if from_date and to_date:
             for (year, month_num), amount in sorted(monthly_map.items()):
@@ -570,6 +583,7 @@ class AnalyticsSummaryView(APIView):
 
 
 class ATOItemBreakdownView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
     def get(self, request, ato_id):
         # Groups the sum of revenue by tax_item for a specific ATO
         data = (

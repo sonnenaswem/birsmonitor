@@ -151,13 +151,11 @@ class ATODetailView(APIView):
             output_field=DecimalField()
         )
         if from_date and to_date:
-            entries = entries.filter(date_uploaded__date__range=[from_date, to_date])
+            entries = entries.filter(date_of_remittance__range=[from_date, to_date])
         else:
-        
-           
             entries = entries.filter(
-                date_uploaded__year=now.year,
-                date_uploaded__month=now.month
+                date_of_remittance__year=now.year,
+                date_of_remittance__month=now.month
             )
     
         
@@ -177,14 +175,14 @@ class ATODetailView(APIView):
         trend_entries = TaxEntry.objects.filter(user=ato)
 
         if from_date and to_date:
-            trend_entries = trend_entries.filter(date_uploaded__date__range=[from_date, to_date])
+            trend_entries = trend_entries.filter(date_of_remittance__date__range=[from_date, to_date])
         else:
             seven_days_ago = now.date() - timedelta(days=7)
-            trend_entries = trend_entries.filter(date_uploaded__date__gte=seven_days_ago)
+            trend_entries = trend_entries.filter(date_of_remittance__gte=seven_days_ago)
 
         trend_data = (
             trend_entries
-            .annotate(date=TruncDate('date_uploaded'))
+            .annotate(date=TruncDate('date_of_remittance'))
             .values('date')
             .annotate(amount=Sum(total_expr))
             .order_by('date')
@@ -197,20 +195,19 @@ class ATODetailView(APIView):
 
         # 4. Highest & Recent Payments
         highest_payments = entries.annotate(total=total_expr).order_by('-total')[:3]
-        recent_payments = entries.order_by('-date_uploaded')[:10]
+        recent_payments = entries.order_by('-date_of_remittance', '-id')[:10]
         last_entry_obj = recent_payments.first()
         last_entry_time = None
-        if last_entry_obj:
-            local_time = timezone.localtime(last_entry_obj.date_uploaded)
-            last_entry_time = local_time.strftime('%b %d, %I:%M %p')
+        if last_entry_obj and last_entry_obj.date_of_remittance:
+            last_entry_time = last_entry_obj.date_of_remittance.strftime('%b %d, %Y')
         # 5. Determine Rank
         all_atos = CustomUser.objects.filter(role='ato')
         rank_list = []
         for a in all_atos:
             total = TaxEntry.objects.filter(
                 user=a,
-                date_uploaded__year=now.year,
-                date_uploaded__month=now.month
+                date_of_remittance__year=now.year,
+                date_of_remittance__month=now.month
             ).aggregate(s=Sum(total_expr))['s'] or 0
 
             rank_list.append((a.id, total))
@@ -251,6 +248,7 @@ class ATODetailView(APIView):
             "username": ato.username,
             "full_name": getattr(ato, 'full_name', ato.first_name),
             "area_office": ato.area_office,
+            "station_name": ato.area_office or ato.username,
             "target": target_amount,
             "total": grand_total,
             "pos_total": float(totals['pos_total'] or 0),
@@ -274,7 +272,7 @@ class ATODetailView(APIView):
                     "reference": p.remita or p.interswitch_ref or p.gokollect,
                     "amount": float((p.remita_amount or 0) + (p.interswitch_amount or 0) + (p.gokollect_amount or 0)), 
                     "source": p.source, 
-                    "date": p.date_uploaded.strftime('%Y-%m-%d %H:%M:%S')
+                    "date": p.date_of_remittance.strftime('%Y-%m-%d %H:%M:%S')
                 } for p in recent_payments
             ]
         })
