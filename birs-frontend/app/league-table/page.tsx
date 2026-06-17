@@ -132,7 +132,7 @@ export default function LeagueTablePage() {
       `}</style>
       {/* Header */}
       <div className="league-header" style={{
-        background: "linear-gradient(135deg, #052e16 0%, #064e3b 100%)",
+        background: "linear-gradient(135deg, #0d7036 0%, #31ab8a 100%)",
         padding: "28px 32px",
         borderRadius: "16px",
         color: "white",

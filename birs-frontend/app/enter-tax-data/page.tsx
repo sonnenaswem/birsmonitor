@@ -338,14 +338,25 @@ export default function EnterTaxDataPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               {[
                 { label: "Taxpayer Name", value: lookupResult.taxpayer_name },
-                { label: "Amount", value: `₦${lookupResult.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` },
-                { label: "Service / Item", value: lookupResult.service_name || effectiveTaxItem },
-                { label: "Channel", value: lookupResult.payment_channel || channel.toUpperCase() },
+                {
+                  label: "Amount",
+                  value: `₦${lookupResult.amount.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })}`,
+                },
+                {
+                  label: "Service / Item",
+                  value: lookupResult.service_name || effectiveTaxItem,
+                },
+                {
+                  label: "Channel",
+                  value: lookupResult.payment_channel || channel.toUpperCase(),
+                },
                 {
                   label: "Transaction Date",
                   value: lookupResult.date
                     ? new Date(lookupResult.date).toLocaleString("en-NG")
-                    : "N/A"
+                    : "N/A",
                 },
               ].map(({ label, value }) => (
                 <div key={label}>
