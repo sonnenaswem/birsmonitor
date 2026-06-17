@@ -262,9 +262,12 @@ export default function ATODetailPage() {
                         fontSize: 11,
                         fontWeight: 500,
                       }}
-                      tickFormatter={(v) =>
-                        v === 0 ? "0" : `₦${(v / 1000000).toFixed(0)}M`
-                      }
+                      tickFormatter={(v) => {
+                        if (v === 0) return "0";
+                        if (v >= 1000000) return `₦${(v / 1000000).toFixed(1)}M`;
+                        if (v >= 1000) return `₦${(v / 1000).toFixed(0)}K`;
+                        return `₦${v}`;
+                      }}
                     />
 
                     <Tooltip
