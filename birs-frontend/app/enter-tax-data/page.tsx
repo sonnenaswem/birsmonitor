@@ -39,6 +39,7 @@ interface LookupResult {
   amount: number;
   service_name: string;
   payment_channel: string;
+  date?: string;
 }
 
 type ChannelType = "remita" | "interswitch";
@@ -99,7 +100,7 @@ export default function EnterTaxDataPage() {
 
       setSubmitStatus({
         type: "success",
-        msg: `✅ Payment reference recorded successfully.\nTaxpayer: ${lookupResult.taxpayer_name}\nAmount: ₦${lookupResult.amount.toLocaleString()}\nThis entry has been added to your monthly submissions.`,
+        msg: `✅ Payment reference recorded successfully.\nTaxpayer: ${lookupResult.taxpayer_name}\nAmount: ₦${lookupResult.amount.toLocaleString()}\nDate: ${lookupResult.date}\nThis entry has been added to your monthly submissions.`,
       });
 
       // Reset form
@@ -340,6 +341,12 @@ export default function EnterTaxDataPage() {
                 { label: "Amount", value: `₦${lookupResult.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` },
                 { label: "Service / Item", value: lookupResult.service_name || effectiveTaxItem },
                 { label: "Channel", value: lookupResult.payment_channel || channel.toUpperCase() },
+                {
+                  label: "Transaction Date",
+                  value: lookupResult.date
+                    ? new Date(lookupResult.date).toLocaleString("en-NG")
+                    : "N/A"
+                },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <label style={{ fontSize: "11px", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: "4px" }}>

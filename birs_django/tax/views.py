@@ -734,13 +734,19 @@ def lookup_payment_reference(request):
 
         data = resp.json().get("data", {})
 
+        transaction_date = (
+            data.get("transactionDate")
+            or data.get("createdDate")
+            or data.get("createdAt")
+        )
+
         return Response({
             "found": True,
             "taxpayer_name": data.get("customerName") or "Unknown",
             "amount": float(data.get("amount") or 0),
             "service_name": data.get("serviceName") or data.get("itemCode") or "",
             "payment_channel": (data.get("birsPaymentChannel") or "").upper(),
-            "date": None,  # Softnet by-reference doesn't return date reliably
+            "date": transaction_date,
             "raw": data,
         })
 
