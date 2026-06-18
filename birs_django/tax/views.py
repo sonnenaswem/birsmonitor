@@ -109,6 +109,10 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
+        print("\n" + "=" * 80)
+        print("MANUAL ENTRY CREATE")
+        print("VALIDATED DATA:", serializer.validated_data)
+        print("=" * 80 + "\n")
         from birs_django.utils.date_utils import get_current_period
 
         remittance_date = serializer.validated_data.get("date_of_remittance")
@@ -815,7 +819,7 @@ def lookup_assessment_id(request):
         print("\nSOFTNET ASSESSMENT RESPONSE")
         print(data)
         print("\n")
-        
+
         transaction_date = (
             data.get("transactionDate")
             or data.get("createdDate")
@@ -825,20 +829,13 @@ def lookup_assessment_id(request):
         return Response({
             "found": True,
             "assessment_id": assessment_id,
-            "taxpayer_name":
-                data.get("customerName")
-                or "Unknown",
-            "amount":
-                float(data.get("amount") or 0),
-            "service_name":
-                data.get("serviceName")
-                or data.get("itemCode")
-                or "",
-            "payment_channel":
-                (
-                    data.get("birsPaymentChannel")
-                    or ""
-                ).upper(),
+            "payment_reference": data.get("paymentReference"),
+            "taxpayer_name": data.get("customerName") or "Unknown",
+            "amount": float(data.get("amount") or 0),
+            "service_name": data.get("serviceName") or data.get("itemCode") or "",
+            "payment_channel": (
+                data.get("birsPaymentChannel") or ""
+            ).upper(),
             "date": transaction_date,
             "raw": data,
         })
