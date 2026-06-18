@@ -11,6 +11,7 @@ interface Entry {
   subhead: string;
   taxpayer_name: string;
   amount?: number;
+  display_amount?: number;
   remita_amount?: number;
   interswitch_amount?: number;
   gokollect_amount?: number;
@@ -120,18 +121,25 @@ export default function MyEntriesPage() {
                       <div style={{ fontWeight: 600 }}>{entry.tax_item}</div>
                       <div style={{ fontSize: "12px", color: colors.textMuted }}>{entry.subhead}</div>
                     </td>
-                    <td style={styles.td}>{entry.taxpayer_name}</td>
+                    <td style={styles.td}>{entry.taxpayer_name || "N/A"}</td>
                     <td style={{ ...styles.td, ...styles.amountCell }}>
                       {formatCurrency(
-                        Number(entry.total_amount || 0)
+                        Number(entry.total_amount ?? entry.display_amount ?? 0)
                       )}
                     </td>
                     <td style={styles.td}>
-                      {new Date(entry.date_of_remittance).toLocaleDateString("en-NG", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric"
-                      })}
+                      {(() => {
+                        try {
+                          const date = entry.date_of_remittance ? new Date(entry.date_of_remittance) : null;
+                          return date && !isNaN(date.getTime()) ? date.toLocaleDateString("en-NG", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric"
+                          }) : "N/A";
+                        } catch (err) {
+                          return "N/A";
+                        }
+                      })()}
                     </td>
                   </tr>
                 ))}

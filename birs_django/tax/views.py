@@ -756,6 +756,107 @@ def lookup_payment_reference(request):
             {"error": "Could not reach the payment gateway. Please try again."},
             status=503
         )
+    
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def lookup_assessment_id(request):
+    assessment_id = request.GET.get(
+        "assessment_id",
+        ""
+    ).strip()
+
+    if not assessment_id:
+        return Response(
+            {"error": "Assessment ID is required"},
+            status=400
+        )
+
+    import requests as http_requests
+
+    url = (
+        f"{settings.SOFTNET_BASE_URL}"
+        f"/ato/by-assessment/{assessment_id}"
+    )
+
+    headers = {
+        "X-Client-Id": settings.SOFTNET_CLIENT_ID
+    }
+
+    try:
+
+        resp = http_requests.get(
+            url,
+            headers=headers,
+            timeout=15
+        )
+
+        if resp.status_code == 404:
+            return Response(
+                {
+                    "error":
+                    "Assessment ID not found."
+                },
+                status=404
+            )
+
+        if resp.status_code != 200:
+            return Response(
+                {
+                    "error":
+                    "Payment gateway returned an error."
+                },
+                status=502
+            )
+
+        data = resp.json().get(
+            "data",
+            {}
+        )
+        print("\nSOFTNET ASSESSMENT RESPONSE")
+        print(data)
+        print("\n")
+        
+        transaction_date = (
+            data.get("transactionDate")
+            or data.get("createdDate")
+            or data.get("createdAt")
+        )
+
+        return Response({
+            "found": True,
+            "assessment_id": assessment_id,
+            "taxpayer_name":
+                data.get("customerName")
+                or "Unknown",
+            "amount":
+                float(data.get("amount") or 0),
+            "service_name":
+                data.get("serviceName")
+                or data.get("itemCode")
+                or "",
+            "payment_channel":
+                (
+                    data.get("birsPaymentChannel")
+                    or ""
+                ).upper(),
+            "date": transaction_date,
+            "raw": data,
+        })
+
+    except Exception as e:
+
+        logger.exception(
+            f"Assessment lookup failed: {str(e)}"
+        )
+
+        return Response(
+            {
+                "error":
+                "Could not reach payment gateway."
+            },
+            status=503
+        )
+
 
 from django.http import JsonResponse
 

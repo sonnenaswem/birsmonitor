@@ -369,12 +369,27 @@ export default function ViewAllEntries() {
               ) : displayedEntries.length === 0 ? (
                 <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
               ) : (
-                displayedEntries.map(entry => (
+                displayedEntries.map(entry => {
+                  // Format date safely
+                  const formatDate = (dateStr: string | null | undefined) => {
+                    if (!dateStr) return "N/A";
+                    try {
+                      return new Date(dateStr).toLocaleDateString("en-NG", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric"
+                      });
+                    } catch (err) {
+                      return dateStr;
+                    }
+                  };
+                  
+                  return (
                   <tr key={entry.id}>
                     <td style={styles.td}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <Clock size={14} color="#94a3b8" />
-                        {entry.date_of_remittance}
+                        {formatDate(entry.date_of_remittance)}
                       </div>
                     </td>
                     {/* TAXPAYER / ITEM */}
@@ -425,7 +440,7 @@ export default function ViewAllEntries() {
                     {/* AMOUNT */}
                     <td style={styles.td}>
                       <span style={{ fontWeight: "800", color: "#052e16" }}>
-                        ₦{entry.display_amount?.toLocaleString(undefined, {
+                        ₦{(entry.display_amount || 0)?.toLocaleString(undefined, {
                           minimumFractionDigits: 2
                         })}
                       </span>
@@ -471,7 +486,7 @@ export default function ViewAllEntries() {
                       )}
                     </td>
                   </tr>
-                ))
+                );})
               )}
             </tbody>
           </table>

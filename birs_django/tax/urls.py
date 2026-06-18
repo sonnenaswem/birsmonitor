@@ -1,6 +1,9 @@
 from django.urls import path
 from .views import ssl_debug
-from .views import lookup_payment_reference
+from .views import (
+    lookup_payment_reference,
+    lookup_assessment_id,
+)
 from rest_framework.routers import DefaultRouter
 from .views import (
     TaxEntryViewSet,
@@ -34,6 +37,7 @@ urlpatterns = [
     path("ato/<int:ato_id>/breakdown/", ATOItemBreakdownView.as_view(), name="ato-item-breakdown"),
 
     path("lookup-reference/", lookup_payment_reference, name="lookup-reference"),
+    path("lookup-assessment/", lookup_assessment_id, name="lookup-assessment"),
 
     # Webhooks
     path(

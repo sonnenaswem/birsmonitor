@@ -285,7 +285,7 @@ export default function LeagueTablePage() {
                 {["Rank", "ATO Station", "Target", "Remita", "Interswitch", "GoKollect", "Total Revenue", "% Achieved", ""].map((h) => (
                   <th key={h} style={{
                     padding: "16px 18px",
-                    background: "linear-gradient(135deg, #052e16 0%, #064e3b 100%)",
+                    background: "linear-gradient(135deg, #107d3d 0%, #2d715f 100%)",
                     color: "white",
                     textAlign: "left",
                     fontSize: "11px",
