@@ -129,20 +129,94 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
 
         current_month, current_year = get_current_period()
 
+        import requests as http_requests
+
+        validated = serializer.validated_data
+
+        remita = validated.get("remita")
+        interswitch_ref = validated.get("interswitch_ref")
+
+        reference = remita or interswitch_ref
+
+        lookup_data = {}
+
+        if reference:
+
+            try:
+                url = (
+                    f"{settings.SOFTNET_BASE_URL}"
+                    f"/ato/by-payment-reference/{reference}"
+                )
+
+                headers = {
+                    "X-Client-Id": settings.SOFTNET_CLIENT_ID
+                }
+
+                resp = http_requests.get(
+                    url,
+                    headers=headers,
+                    timeout=15
+                )
+
+                if resp.status_code == 200:
+                    lookup_data = resp.json().get("data", {})
+
+            except Exception:
+                pass
+
+        taxpayer_name = (
+            lookup_data.get("customerName")
+            or validated.get("taxpayer_name")
+        )
+
+        amount = lookup_data.get("amount")
+
+        service_name = (
+            lookup_data.get("serviceName")
+            or validated.get("tax_item")
+        )
+
+        transaction_date = (
+            lookup_data.get("transactionDate")
+            or lookup_data.get("createdDate")
+            or lookup_data.get("createdAt")
+        )
+
+        if transaction_date:
+            from datetime import datetime
+
+            try:
+                remittance_date = datetime.fromisoformat(
+                    transaction_date.replace("Z", "+00:00")
+                ).date()
+            except Exception:
+                pass
+
+        save_kwargs = {
+            "user": self.request.user,
+            "area_office": user_area_office,
+            "taxpayer_name": taxpayer_name,
+            "tax_item": service_name,
+            "subhead": service_name,
+        }
+
         if remittance_date:
-            serializer.save(
-                month=remittance_date.month,
-                year=remittance_date.year,
-                user=self.request.user,
-                area_office=user_area_office,
-            )
+            save_kwargs["month"] = remittance_date.month
+            save_kwargs["year"] = remittance_date.year
+            save_kwargs["date_of_remittance"] = remittance_date
         else:
-            serializer.save(
-                month=current_month,
-                year=current_year,
-                user=self.request.user,
-                area_office=user_area_office,
-            )
+            save_kwargs["month"] = current_month
+            save_kwargs["year"] = current_year
+
+        if amount:
+
+            if remita:
+                save_kwargs["remita_amount"] = amount
+
+            if interswitch_ref:
+                save_kwargs["interswitch_amount"] = amount
+
+        serializer.save(**save_kwargs)
 
 
 class TaxEntryActionView(APIView):
@@ -825,6 +899,21 @@ def lookup_assessment_id(request):
             or data.get("createdDate")
             or data.get("createdAt")
         )
+        payment_reference = data.get("paymentReference")
+
+        if TaxEntry.objects.filter(
+            Q(remita=payment_reference) |
+            Q(interswitch_ref=payment_reference) |
+            Q(softnet_reference=payment_reference)
+        ).exists():
+
+            return Response(
+                {
+                    "error":
+                    "This payment has already been submitted."
+                },
+                status=400
+            )
 
         return Response({
             "found": True,
@@ -839,7 +928,19 @@ def lookup_assessment_id(request):
             "date": transaction_date,
             "raw": data,
         })
+        # if TaxEntry.objects.filter(
+        #     Q(remita=payment_reference) |
+        #     Q(interswitch_ref=payment_reference) |
+        #     Q(softnet_reference=payment_reference)
+        # ).exists():
 
+        #     return Response(
+        #         {
+        #             "error":
+        #             "This payment has already been submitted."
+        #         },
+        #         status=400
+        #     )
     except Exception as e:
 
         logger.exception(
