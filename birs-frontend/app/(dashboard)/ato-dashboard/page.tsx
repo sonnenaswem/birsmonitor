@@ -111,9 +111,24 @@ export default function AtoDashboard() {
                   const interswitch = Number(rec.interswitch_amount || 0);
                   const gokollect = Number(rec.gokollect_amount || 0);
                   const total = remita + interswitch + gokollect;
+                  
+                  // Format date safely
+                  const formatDate = (dateStr: string | null | undefined) => {
+                    if (!dateStr) return "N/A";
+                    try {
+                      return new Date(dateStr).toLocaleDateString("en-NG", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric"
+                      });
+                    } catch (err) {
+                      return dateStr;
+                    }
+                  };
+                  
                   return (
                   <tr key={i}>
-                    <td style={styles.td}>{rec.date_of_remittance}</td>
+                    <td style={styles.td}>{formatDate(rec.date_of_remittance)}</td>
                     <td style={styles.td}>₦{remita.toLocaleString()}</td>
                     <td style={styles.td}>₦{interswitch.toLocaleString()}</td>
                     <td style={styles.td}>₦{gokollect.toLocaleString()}</td>
