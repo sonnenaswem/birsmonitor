@@ -92,8 +92,30 @@ export default function EnterTaxDataPage() {
       const payload = {
         tax_item: effectiveTaxItem,
         subhead: effectiveTaxItem,
-        remita: channel === "remita" ? reference.trim() : null,
-        interswitch_ref: channel === "interswitch" ? reference.trim() : null,
+
+        taxpayer_name: lookupResult.taxpayer_name,
+
+        date_of_remittance: lookupResult.date
+          ? lookupResult.date.split("T")[0]
+          : null,
+
+        remita: channel === "remita"
+          ? reference.trim()
+          : null,
+
+        interswitch_ref: channel === "interswitch"
+          ? reference.trim()
+          : null,
+
+        remita_amount:
+          channel === "remita"
+            ? lookupResult.amount
+            : null,
+
+        interswitch_amount:
+          channel === "interswitch"
+            ? lookupResult.amount
+            : null,
       };
 
       await api.post("/api/tax/entries/", payload);
