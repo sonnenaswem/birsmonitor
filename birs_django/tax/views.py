@@ -158,6 +158,18 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
                     timeout=15
                 )
 
+                print("\n" + "=" * 80)
+                print("SOFTNET PAYMENT LOOKUP")
+                print("REFERENCE:", reference)
+                print("STATUS:", resp.status_code)
+
+                try:
+                    print("JSON:", resp.json())
+                except Exception as e:
+                    print("JSON ERROR:", str(e))
+
+                print("=" * 80 + "\n")
+
                 if resp.status_code == 200:
                     lookup_data = resp.json().get("data", {})
 
