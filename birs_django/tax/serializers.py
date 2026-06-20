@@ -67,7 +67,7 @@ class TaxEntrySerializer(serializers.ModelSerializer):
         grace_days = getattr(
             settings,
             "MONTH_SUBMISSION_GRACE_DAYS",
-            5
+            7
         )
 
         current_month = today.month
