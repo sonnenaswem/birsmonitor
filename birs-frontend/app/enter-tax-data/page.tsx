@@ -40,6 +40,8 @@ interface LookupResult {
   service_name: string;
   payment_channel: string;
   date?: string;
+  payment_reference?: string;
+  assessment_id?: string;
 }
 
 type ChannelType = "remita" | "interswitch";
@@ -49,7 +51,10 @@ export default function EnterTaxDataPage() {
   const [taxItem, setTaxItem] = useState("");
   const [roadSubhead, setRoadSubhead] = useState("");
   const [channel, setChannel] = useState<ChannelType>("remita");
-  const [reference, setReference] = useState("");
+  const [lookupMode, setLookupMode] = useState<
+    "reference" | "assessment"
+  >("reference");
+  const [lookupValue, setLookupValue] = useState("");
   const [lookupState, setLookupState] = useState<LookupState>("idle");
   const [lookupError, setLookupError] = useState("");
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
@@ -60,24 +65,34 @@ export default function EnterTaxDataPage() {
     taxItem === "Road_Taxes" ? roadSubhead : taxItem;
 
   const canLookup =
-    reference.trim().length >= 6 && effectiveTaxItem;
+    lookupValue.trim().length >= 6 && effectiveTaxItem;
 
   const handleLookup = async () => {
     if (!canLookup) return;
+
     setLookupState("loading");
     setLookupError("");
     setLookupResult(null);
 
     try {
-      const res = await api.get(
-        `/api/tax/lookup-reference/?reference=${encodeURIComponent(reference.trim())}`
-      );
+      const endpoint =
+        lookupMode === "reference"
+          ? `/api/tax/lookup-reference/?reference=${encodeURIComponent(
+              lookupValue.trim()
+            )}`
+          : `/api/tax/lookup-assessment/?assessment_id=${encodeURIComponent(
+              lookupValue.trim()
+            )}`;
+
+      const res = await api.get(endpoint);
+
       setLookupResult(res.data);
       setLookupState("found");
     } catch (err: any) {
       const msg =
         err.response?.data?.error ||
-        "Could not verify this reference. Please check and try again.";
+        "Could not verify this record.";
+
       setLookupError(msg);
       setLookupState("error");
     }
@@ -89,6 +104,11 @@ export default function EnterTaxDataPage() {
     setSubmitStatus({ type: "", msg: "" });
 
     try {
+      const finalReference =
+        lookupMode === "assessment"
+          ? lookupResult.payment_reference
+          : lookupValue.trim();
+
       const payload = {
         tax_item: effectiveTaxItem,
         subhead: effectiveTaxItem,
@@ -99,13 +119,15 @@ export default function EnterTaxDataPage() {
           ? lookupResult.date.split("T")[0]
           : null,
 
-        remita: channel === "remita"
-          ? reference.trim()
-          : null,
+        remita:
+          channel === "remita"
+            ? finalReference
+            : null,
 
-        interswitch_ref: channel === "interswitch"
-          ? reference.trim()
-          : null,
+        interswitch_ref:
+          channel === "interswitch"
+            ? finalReference
+            : null,
 
         remita_amount:
           channel === "remita"
@@ -126,7 +148,7 @@ export default function EnterTaxDataPage() {
       });
 
       // Reset form
-      setReference("");
+      setLookupValue("");
       setLookupResult(null);
       setLookupState("idle");
       setTaxItem("");
@@ -231,7 +253,51 @@ export default function EnterTaxDataPage() {
             </select>
           </div>
         )}
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{
+              fontWeight: 600,
+              display: "block",
+              marginBottom: "8px",
+              fontSize: "13px",
+              color: "#374151",
+            }}
+          >
+            Lookup Method
+          </label>
 
+          <div style={{ display: "flex", gap: "12px" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setLookupMode("reference");
+                setLookupValue("");
+                setLookupResult(null);
+              }}
+              style={{
+                padding: "10px 16px",
+                borderRadius: "8px",
+              }}
+            >
+              Payment Reference
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setLookupMode("assessment");
+                setLookupValue("");
+                setLookupResult(null);
+              }}
+              style={{
+                padding: "10px 16px",
+                borderRadius: "8px",
+              }}
+            >
+              Assessment ID
+            </button>
+          </div>
+        </div>
         {/* Step 2: Payment Channel */}
         {effectiveTaxItem && (
           <div style={{ marginBottom: "20px" }}>
@@ -245,7 +311,7 @@ export default function EnterTaxDataPage() {
                   type="button"
                   onClick={() => {
                     setChannel(ch);
-                    setReference("");
+                    setLookupValue("");
                     setLookupResult(null);
                     setLookupState("idle");
                   }}
@@ -278,10 +344,16 @@ export default function EnterTaxDataPage() {
               <input
                 style={{ ...inputStyle, flex: 1 }}
                 type="text"
-                placeholder={channel === "remita" ? "Enter RRR (Remita Retrieval Reference)" : "Enter Interswitch reference"}
-                value={reference}
+                placeholder={
+                  lookupMode === "reference"
+                    ? channel === "remita"
+                      ? "Enter Remita Reference"
+                      : "Enter Interswitch Reference"
+                    : "Enter Assessment ID"
+                }
+                value={lookupValue}
                 onChange={(e) => {
-                  setReference(e.target.value);
+                  setLookupValue(e.target.value);
                   setLookupResult(null);
                   setLookupState("idle");
                   setLookupError("");

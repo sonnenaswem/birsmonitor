@@ -269,11 +269,16 @@ class TaxEntryActionView(APIView):
 @permission_classes([AllowAny])
 def softnet_webhook(request):
 
-    incoming_client_id = request.headers.get(
-        "clientId"
+    incoming_client_id = (
+        request.headers.get("clientId")
+        or request.headers.get("Client-Id")
+        or request.headers.get("X-Client-Id")
     )
 
-    expected_client_id = settings.SOFTNET_CLIENT_ID
+    allowed_client_ids = [
+        settings.SOFTNET_CLIENT_ID,
+        settings.SOFTNET_WEBHOOK_CLIENT_ID,
+    ]
 
     if not incoming_client_id:
 
@@ -289,11 +294,14 @@ def softnet_webhook(request):
             status=401
         )
 
-    if incoming_client_id != expected_client_id:
+    if incoming_client_id not in allowed_client_ids:
 
         logger.warning(
-            f"Unauthorized Softnet webhook attempt: "
-            f"{incoming_client_id}"
+            f"Incoming clientId: {incoming_client_id}"
+        )
+
+        logger.warning(
+            f"Allowed clientIds: {allowed_client_ids}"
         )
 
         return Response(
