@@ -26,7 +26,7 @@ from django.conf import settings
 from tax.tasks import process_softnet_webhook_task
 from birs_django.utils.date_utils  import get_current_period
 from rest_framework.pagination import PageNumberPagination
-from datetime import datetime
+from datetime import datetime, date 
 
 
 logger = logging.getLogger(__name__)
@@ -228,6 +228,40 @@ class TaxEntryViewSet(viewsets.ModelViewSet):
             if interswitch_ref:
                 save_kwargs["interswitch_amount"] = amount
 
+
+        # Enforce grace period rules for manual submissions
+        today = date.today()
+        grace_days = getattr(settings, "MONTH_SUBMISSION_GRACE_DAYS", 7)
+
+        current_month = today.month
+        current_year = today.year
+
+        # Calculate previous month/year
+        if current_month == 1:
+            previous_month = 12
+            previous_year = current_year - 1
+        else:
+            previous_month = current_month - 1
+            previous_year = current_year
+
+        if remittance_date:
+            if not (
+                (remittance_date.month == current_month and remittance_date.year == current_year)
+                or (
+                    today.day <= grace_days
+                    and remittance_date.month == previous_month
+                    and remittance_date.year == previous_year
+                )
+            ):
+                raise serializers.ValidationError({
+                    "date_of_remittance": (
+                        f"You can only submit current month payments "
+                        f"or previous month payments within the first "
+                        f"{grace_days} days of a new month."
+                    )
+                })
+
+
         serializer.save(**save_kwargs)
 
 
@@ -277,7 +311,7 @@ def softnet_webhook(request):
 
     allowed_client_ids = [
         settings.SOFTNET_CLIENT_ID,
-        settings.SOFTNET_WEBHOOK_CLIENT_ID,
+        settings.SOFTNET_WEBHOOK_CLIENT,
     ]
 
     if not incoming_client_id:
