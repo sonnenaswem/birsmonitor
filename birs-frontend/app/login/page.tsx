@@ -120,7 +120,8 @@ export default function LoginPage() {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
+          justifyContent: "center",
+          gap: 48,
           padding: "56px 64px",
         }}
       >
@@ -136,7 +137,7 @@ export default function LoginPage() {
           }}
         />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, position: "absolute", top: 56, left: 64 }}>
           <img
             src="/logo1.png"
             alt="BIRS Logo"
@@ -183,24 +184,110 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div style={{ position: "relative", maxWidth: 420 }}>
+        <div style={{ position: "relative", maxWidth: 440 }}>
           <h1
             style={{
               fontFamily: "'Fraunces', serif",
               fontWeight: 600,
-              fontSize: "clamp(1.9rem, 3vw, 2.6rem)",
+              fontSize: "clamp(1.7rem, 2.6vw, 2.25rem)",
               color: "#fff",
               lineHeight: 1.15,
               letterSpacing: "-0.01em",
-              marginBottom: 18,
+              marginBottom: 14,
             }}
           >
             Revenue integrity, <em style={{ fontStyle: "italic", color: "#4ade80" }}>verified in real time.</em>
           </h1>
-          <p style={{ fontSize: 15, color: "rgba(250,248,243,0.7)", lineHeight: 1.7 }}>
+          <p style={{ fontSize: 14.5, color: "rgba(250,248,243,0.7)", lineHeight: 1.65, marginBottom: 30 }}>
             Sign in to track collections, verify payment references, and audit Area Tax Office
             performance across Benue State.
           </p>
+
+          {/* Dashboard preview mockup */}
+          <div
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 16,
+              padding: 20,
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(250,248,243,0.55)", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                League Table — June 2026
+              </span>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: "#4ade80",
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ade80" }} />
+                Live
+              </span>
+            </div>
+
+            {[
+              { name: "ATO Zaki Biam", pct: 100, amt: "₦100.9M", medal: "🥇" },
+              { name: "ATO Terwase Agbadu", pct: 96, amt: "₦68.5M", medal: "🥈" },
+              { name: "ATO Adikpo", pct: 88, amt: "₦50.4M", medal: "🥉" },
+            ].map((row) => (
+              <div key={row.name} style={{ marginBottom: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(250,248,243,0.92)", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 13 }}>{row.medal}</span>
+                    {row.name}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#e0bf4f" }}>{row.amt}</span>
+                </div>
+                <div style={{ height: 5, background: "rgba(255,255,255,0.1)", borderRadius: 99, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${row.pct}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #4ade80, #e0bf4f)",
+                      borderRadius: 99,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 10,
+                marginTop: 18,
+                paddingTop: 16,
+                borderTop: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 9.5, color: "rgba(250,248,243,0.5)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>
+                  Remita
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>₦456.7M</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9.5, color: "rgba(250,248,243,0.5)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>
+                  GoKollect
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>₦68.4M</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9.5, color: "rgba(250,248,243,0.5)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>
+                  Total
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#4ade80" }}>₦526.9M</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div style={{ position: "relative", display: "flex", gap: 28 }}>

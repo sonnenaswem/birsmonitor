@@ -157,6 +157,11 @@ def performance_summary(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_my_entries_csv(request):
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+
     user = request.user
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
@@ -168,21 +173,97 @@ def export_my_entries_csv(request):
 
     entries = entries.order_by('-date_of_remittance')
 
-    filename = f"my_submissions_{datetime.now().strftime('%Y-%m-%d')}.csv"
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "My Submissions"
 
-    writer = csv.writer(response)
-    writer.writerow(['Date', 'Remita (NGN)', 'Interswitch (NGN)', 'GoKollect (NGN)', 'Total (NGN)'])
+    station_name = getattr(user, "area_office", None) or user.username
+    period_label = f"{from_date} to {to_date}" if (from_date and to_date) else "Current Month"
+
+    ws.merge_cells("A1:E1")
+    ws["A1"] = f"BIRS Revenue Submissions — {station_name}"
+    ws["A1"].font = Font(size=14, bold=True, color="052E16")
+    ws["A1"].alignment = Alignment(horizontal="left")
+
+    ws.merge_cells("A2:E2")
+    ws["A2"] = f"Period: {period_label}"
+    ws["A2"].font = Font(size=10, italic=True, color="6B7280")
+
+    headers = ["Date", "Remita (NGN)", "Interswitch (NGN)", "GoKollect (NGN)", "Total (NGN)"]
+    header_row = 4
+    header_fill = PatternFill(start_color="052E16", end_color="052E16", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    thin_border = Border(
+        left=Side(style="thin", color="D1D5DB"),
+        right=Side(style="thin", color="D1D5DB"),
+        top=Side(style="thin", color="D1D5DB"),
+        bottom=Side(style="thin", color="D1D5DB"),
+    )
+
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+
+    row_idx = header_row + 1
+    grand_total = 0.0
 
     for rec in entries:
         remita = float(rec.remita_amount or 0)
         interswitch = float(rec.interswitch_amount or 0)
         gokollect = float(rec.gokollect_amount or 0)
         total = remita + interswitch + gokollect
-        date_str = rec.date_of_remittance.strftime("%Y-%m-%d") if rec.date_of_remittance else "N/A"
-        writer.writerow([date_str, remita, interswitch, gokollect, total])
+        grand_total += total
 
+        date_str = rec.date_of_remittance.strftime("%Y-%m-%d") if rec.date_of_remittance else "N/A"
+
+        row_data = [date_str, remita, interswitch, gokollect, total]
+        for col_idx, value in enumerate(row_data, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.border = thin_border
+            if col_idx > 1:
+                cell.number_format = "#,##0.00"
+                cell.alignment = Alignment(horizontal="right")
+            else:
+                cell.alignment = Alignment(horizontal="center")
+
+        row_idx += 1
+
+    if entries.exists():
+        total_label_cell = ws.cell(row=row_idx, column=1, value="TOTAL")
+        total_label_cell.font = Font(bold=True)
+        total_label_cell.border = thin_border
+        total_label_cell.alignment = Alignment(horizontal="center")
+
+        for col_idx in range(2, 5):
+            ws.cell(row=row_idx, column=col_idx, value="").border = thin_border
+
+        total_cell = ws.cell(row=row_idx, column=5, value=grand_total)
+        total_cell.font = Font(bold=True, color="052E16")
+        total_cell.number_format = "#,##0.00"
+        total_cell.alignment = Alignment(horizontal="right")
+        total_cell.fill = PatternFill(start_color="ECFDF5", end_color="ECFDF5", fill_type="solid")
+        total_cell.border = thin_border
+    else:
+        ws.cell(row=row_idx, column=1, value="No records found for the selected period.")
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+
+    column_widths = [16, 18, 18, 18, 18]
+    for i, width in enumerate(column_widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = f"my_submissions_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
 
