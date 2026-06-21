@@ -12,6 +12,7 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,14 +20,13 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     try {
       const res = await api.post("/api/auth/login/", {
         username,
         password,
       });
 
-      // Save tokens for middleware and API calls
       setCookie("access", res.data.access, {
         maxAge: 60 * 60,
         path: "/",
@@ -40,7 +40,7 @@ export default function LoginPage() {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
       });
-      // Save data for client-side logic
+
       localStorage.setItem("token", res.data.access);
       localStorage.setItem("role", res.data.role?.toLowerCase() || "");
       if (res.data.full_name) {
@@ -50,7 +50,6 @@ export default function LoginPage() {
       const userRole = res.data.role?.toLowerCase();
       setUser({ role: userRole || null, fullName: res.data.full_name || null });
 
-      // Precise Redirection logic
       const adminRoles = ["admin", "director", "auditor", "assistant"];
 
       if (adminRoles.includes(userRole)) {
@@ -60,7 +59,6 @@ export default function LoginPage() {
         router.push("/ato-dashboard");
         router.refresh();
       } else {
-        console.log("UNKNOWN ROLE:", userRole); // 👈 debug
         setError("User role not recognized. Contact Administrator.");
       }
     } catch (err: any) {
@@ -70,136 +68,334 @@ export default function LoginPage() {
     }
   };
 
-  const styles = {
-    wrapper: {
-      height: "100vh",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      background: "linear-gradient(135deg, #065f46 0%, #064e3b 100%)", 
-      fontFamily: '"Inter", sans-serif',
-    },
-    card: {
-      width: "100%",
-      maxWidth: "400px",
-      backgroundColor: "white",
-      padding: "40px",
-      borderRadius: "16px",
-      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
-      textAlign: "center" as const,
-    },
-    logo: {
-      height: "60px",
-      marginBottom: "20px",
-    },
-    title: {
-      fontSize: "24px",
-      fontWeight: 700,
-      color: "#064e3b",
-      marginBottom: "8px",
-    },
-    subtitle: {
-      fontSize: "14px",
-      color: "#6b7280",
-      marginBottom: "30px",
-    },
-    inputGroup: {
-      marginBottom: "15px",
-      textAlign: "left" as const,
-    },
-    label: {
-      display: "block",
-      fontSize: "12px",
-      fontWeight: 600,
-      color: "#374151",
-      marginBottom: "5px",
-      textTransform: "uppercase" as const,
-      letterSpacing: "0.05em",
-    },
-    input: {
-      width: "100%",
-      padding: "12px 16px",
-      borderRadius: "8px",
-      border: "1px solid #d1d5db",
-      fontSize: "16px",
-      outline: "none",
-      transition: "border-color 0.2s",
-      boxSizing: "border-box" as const,
-    },
-    button: {
-      width: "100%",
-      padding: "14px",
-      backgroundColor: "#10b981", 
-      color: "white",
-      border: "none",
-      borderRadius: "8px",
-      fontSize: "16px",
-      fontWeight: 600,
-      cursor: "pointer",
-      marginTop: "10px",
-      transition: "background-color 0.2s",
-    },
-    errorBox: {
-      backgroundColor: "#fef2f2",
-      color: "#dc2626",
-      padding: "12px",
-      borderRadius: "8px",
-      fontSize: "14px",
-      marginBottom: "20px",
-      border: "1px solid #fee2e2",
-    }
-  };
-
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.card}>
-        <img src="/logo1.png" alt="BIRS" style={styles.logo} />
-        <h2 style={styles.title}>Portal Sign In</h2>
-        <p style={styles.subtitle}>Enter your credentials to manage tax performance</p>
+    <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
 
-        {error && <div style={styles.errorBox}>{error}</div>}
+        .login-input{
+          width:100%;padding:13px 16px;border-radius:9px;
+          border:1.5px solid #dcd4bf;font-size:15px;outline:none;
+          transition:border-color .18s ease, box-shadow .18s ease;
+          box-sizing:border-box;font-family:'Inter',sans-serif;
+          background:#fff;color:#13261a;
+        }
+        .login-input::placeholder{color:#9ca39a;}
+        .login-input:focus{
+          border-color:#052e16;
+          box-shadow:0 0 0 3.5px rgba(5,46,22,0.10);
+        }
+        .login-submit{
+          width:100%;padding:14px;border:none;border-radius:9px;
+          background:#052e16;color:#faf8f3;font-size:15.5px;font-weight:600;
+          cursor:pointer;margin-top:6px;transition:background .18s ease, transform .15s ease;
+          display:flex;align-items:center;justify-content:center;gap:8px;
+        }
+        .login-submit:hover:not(:disabled){background:#0a3d1f;transform:translateY(-1px);}
+        .login-submit:disabled{opacity:0.7;cursor:not-allowed;}
+        .toggle-pw{
+          position:absolute;right:14px;top:50%;transform:translateY(-50%);
+          background:none;border:none;cursor:pointer;color:#7d8c80;
+          display:flex;align-items:center;padding:4px;
+        }
+        .toggle-pw:hover{color:#052e16;}
+        .ledger-bg::before{
+          content:"";position:absolute;inset:0;pointer-events:none;opacity:0.5;
+          background-image:repeating-linear-gradient(180deg, transparent, transparent 27px, rgba(255,255,255,0.035) 28px);
+          mask-image:linear-gradient(180deg, transparent, black 25%, black 80%, transparent);
+        }
+        @media (max-width: 880px){
+          .login-brand-panel{ display:none !important; }
+          .login-form-panel{ flex:1 1 100% !important; max-width:100% !important; }
+        }
+      `}</style>
 
-        <form onSubmit={handleLogin}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Username</label>
-            <input
-              style={styles.input}
-              placeholder="Enter username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
+      {/* LEFT — BRAND PANEL */}
+      <div
+        className="login-brand-panel ledger-bg"
+        style={{
+          flex: "1 1 46%",
+          background: "linear-gradient(160deg, #052e16 0%, #0a3d1f 100%)",
+          position: "relative",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "56px 64px",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            width: 420,
+            height: 420,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(201,162,39,0.16), transparent 70%)",
+            top: -140,
+            right: -100,
+          }}
+        />
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Password</label>
-            <input
-              style={styles.input}
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
+          <img
+            src="/logo1.png"
+            alt="BIRS Logo"
+            style={{ height: 42, width: "auto" }}
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.style.display = "none";
+              const fallback = target.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = "flex";
+            }}
+          />
+          <div
             style={{
-              ...styles.button,
-              opacity: isLoading ? 0.7 : 1,
-              backgroundColor: isLoading ? "#059669" : "#10b981"
+              display: "none",
+              width: 42,
+              height: 42,
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.1)",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#e0bf4f",
+              fontFamily: "'Fraunces', serif",
+              fontWeight: 700,
+              fontSize: 18,
             }}
           >
-            {isLoading ? "Authenticating..." : "Login to Dashboard"}
-          </button>
-        </form>
+            B
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 17, color: "#fff" }}>
+              BIRS Monitor
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: "rgba(250,248,243,0.6)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                marginTop: -2,
+              }}
+            >
+              Revenue Intelligence
+            </div>
+          </div>
+        </div>
 
-        <p style={{ marginTop: "25px", fontSize: "12px", color: "#9ca3af" }}>
-          Secured by BIRS IT Infrastructure
-        </p>
+        <div style={{ position: "relative", maxWidth: 420 }}>
+          <h1
+            style={{
+              fontFamily: "'Fraunces', serif",
+              fontWeight: 600,
+              fontSize: "clamp(1.9rem, 3vw, 2.6rem)",
+              color: "#fff",
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              marginBottom: 18,
+            }}
+          >
+            Revenue integrity, <em style={{ fontStyle: "italic", color: "#4ade80" }}>verified in real time.</em>
+          </h1>
+          <p style={{ fontSize: 15, color: "rgba(250,248,243,0.7)", lineHeight: 1.7 }}>
+            Sign in to track collections, verify payment references, and audit Area Tax Office
+            performance across Benue State.
+          </p>
+        </div>
+
+        <div style={{ position: "relative", display: "flex", gap: 28 }}>
+          <div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, color: "#e0bf4f" }}>
+              99.9%
+            </div>
+            <div style={{ fontSize: 11.5, color: "rgba(250,248,243,0.55)" }}>System uptime</div>
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, color: "#e0bf4f" }}>
+              24/7
+            </div>
+            <div style={{ fontSize: 11.5, color: "rgba(250,248,243,0.55)" }}>Monitoring</div>
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, color: "#e0bf4f" }}>
+              Secure
+            </div>
+            <div style={{ fontSize: 11.5, color: "rgba(250,248,243,0.55)" }}>Encryption</div>
+          </div>
+        </div>
       </div>
+
+      {/* RIGHT — FORM PANEL */}
+      <div
+        className="login-form-panel"
+        style={{
+          flex: "1 1 54%",
+          maxWidth: 560,
+          background: "#faf8f3",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 32px",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: 380 }}>
+          <h2
+            style={{
+              fontFamily: "'Fraunces', serif",
+              fontSize: 26,
+              fontWeight: 600,
+              color: "#052e16",
+              marginBottom: 8,
+            }}
+          >
+            Portal sign in
+          </h2>
+          <p style={{ fontSize: 14, color: "#3f5648", marginBottom: 32 }}>
+            Enter your credentials to manage tax performance.
+          </p>
+
+          {error && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                backgroundColor: "#fef2f2",
+                color: "#991b1b",
+                padding: "13px 14px",
+                borderRadius: 9,
+                fontSize: 13.5,
+                marginBottom: 22,
+                border: "1px solid #fecaca",
+                lineHeight: 1.5,
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ flexShrink: 0, marginTop: 1 }}
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin}>
+            <div style={{ marginBottom: 16, textAlign: "left" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#374151",
+                  marginBottom: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Username
+              </label>
+              <input
+                className="login-input"
+                placeholder="Enter username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoComplete="username"
+              />
+            </div>
+
+            <div style={{ marginBottom: 8, textAlign: "left", position: "relative" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#374151",
+                  marginBottom: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Password
+              </label>
+              <input
+                className="login-input"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                style={{ paddingRight: 44 }}
+              />
+              <button
+                type="button"
+                className="toggle-pw"
+                style={{ top: "calc(50% + 11px)" }}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            <button type="submit" disabled={isLoading} className="login-submit">
+              {isLoading ? (
+                <>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    style={{ animation: "spin 0.8s linear infinite" }}
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  Login to dashboard
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </form>
+
+          <p style={{ marginTop: 28, fontSize: 12, color: "#9ca3af", textAlign: "center" }}>
+            Secured by BIRS IT Infrastructure
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
