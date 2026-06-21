@@ -29,6 +29,9 @@ def performance_summary(request):
   month, year = get_current_period()
   try:
     user = request.user
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
+    use_date_range = bool(from_date and to_date)
 
     # Get target
 
@@ -39,14 +42,15 @@ def performance_summary(request):
     ).order_by("-created_at").first()
 
     target_amount = target_obj.target_amount if target_obj else 0
-        
+
+    base_qs = TaxEntry.objects.filter(user=user)
+    if use_date_range:
+        base_qs = base_qs.filter(date_of_remittance__range=[from_date, to_date])
+    else:
+        base_qs = base_qs.filter(month=month, year=year)
+
     # POS subtotal
-    pos_totals = TaxEntry.objects.filter(
-        source="POS",
-        user=user,
-        month=month,
-        year=year
-    ).aggregate(
+    pos_totals = base_qs.filter(source="POS").aggregate(
         remita=Sum('remita_amount'),
         interswitch=Sum('interswitch_amount'),
         gokollect=Sum('gokollect_amount')
@@ -56,7 +60,7 @@ def performance_summary(request):
 
 
     # Manual subtotal
-    manual_totals = TaxEntry.objects.filter(source="Manual", user=user, month=month, year=year).aggregate(
+    manual_totals = base_qs.filter(source="Manual").aggregate(
         remita=Sum('remita_amount'),
         interswitch=Sum('interswitch_amount'),
         gokollect=Sum('gokollect_amount')
@@ -121,7 +125,7 @@ def performance_summary(request):
     total_values = [pos_values[i] + manual_values[i] for i in range(len(pos_values))]
 
     
-    recent_entries = TaxEntry.objects.filter(user=user).order_by('-date_of_remittance')[:10]
+    recent_entries = base_qs.order_by('-date_of_remittance')[:10]
     record_data = [{
         "date_of_remittance": (
             rec.date_of_remittance.strftime("%Y-%m-%d")
@@ -149,6 +153,37 @@ def performance_summary(request):
   except Exception as e:
         print("🔥 SUMMARY ERROR:", str(e))
         return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_my_entries_csv(request):
+    user = request.user
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
+
+    entries = TaxEntry.objects.filter(user=user)
+
+    if from_date and to_date:
+        entries = entries.filter(date_of_remittance__range=[from_date, to_date])
+
+    entries = entries.order_by('-date_of_remittance')
+
+    filename = f"my_submissions_{datetime.now().strftime('%Y-%m-%d')}.csv"
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Date', 'Remita (NGN)', 'Interswitch (NGN)', 'GoKollect (NGN)', 'Total (NGN)'])
+
+    for rec in entries:
+        remita = float(rec.remita_amount or 0)
+        interswitch = float(rec.interswitch_amount or 0)
+        gokollect = float(rec.gokollect_amount or 0)
+        total = remita + interswitch + gokollect
+        date_str = rec.date_of_remittance.strftime("%Y-%m-%d") if rec.date_of_remittance else "N/A"
+        writer.writerow([date_str, remita, interswitch, gokollect, total])
+
+    return response
 
 
 class MonthlyLeagueSnapshotViewSet(viewsets.ReadOnlyModelViewSet):

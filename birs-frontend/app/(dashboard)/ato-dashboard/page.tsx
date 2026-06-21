@@ -8,31 +8,80 @@ import DashboardLayout from "@/components/DashboardLayout";
 export default function AtoDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const router = useRouter();
 
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
+
   useEffect(() => {
-    api.get("/api/performance/summary/")
+    setLoading(true);
+    const params: any = {};
+    if (appliedFrom && appliedTo) {
+      params.from_date = appliedFrom;
+      params.to_date = appliedTo;
+    }
+    api.get("/api/performance/summary/", { params })
       .then((res) => setData(res.data))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [appliedFrom, appliedTo]);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const params: any = {};
+      if (appliedFrom && appliedTo) {
+        params.from_date = appliedFrom;
+        params.to_date = appliedTo;
+      }
+
+      const response = await api.get("/api/performance/export-my-entries/", {
+        responseType: "blob",
+        params,
+      });
+
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"] || "text/csv",
+      });
+
+      const contentDisposition = response.headers["content-disposition"] || "";
+      const filenameMatch = contentDisposition.match(/filename="?(.*)"?/);
+      const filename = filenameMatch?.[1] || `my_submissions_${new Date().toISOString().slice(0, 10)}.csv`;
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error("Download failed", err);
+      alert("Failed to download report. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const styles: { [key: string]: React.CSSProperties } = {
-    // Removed "margin: 0 auto" and "maxWidth" to let it fill the layout properly
     container: { fontFamily: "sans-serif" },
     header: { marginBottom: "25px" },
-    cardGrid: { 
-      display: "grid", 
-      gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", 
-      gap: "20px", 
-      marginBottom: "30px" 
+    cardGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+      gap: "20px",
+      marginBottom: "30px"
     },
-    card: { 
-      background: "white", 
-      padding: "24px", 
-      borderRadius: "12px", 
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", 
-      border: "1px solid #e2e8f0" 
+    card: {
+      background: "white",
+      padding: "24px",
+      borderRadius: "12px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+      border: "1px solid #e2e8f0"
     },
     label: { color: "#64748b", fontSize: "0.85rem", fontWeight: "600", marginBottom: "8px", display: "block", textTransform: "uppercase" },
     value: { fontSize: "1.75rem", fontWeight: "bold", margin: 0, color: "#1e293b" },
@@ -47,6 +96,19 @@ export default function AtoDashboard() {
 
   if (loading) return <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Loading ATO Portal...</div>;
 
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "N/A";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-NG", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <DashboardLayout>
       <div style={styles.container}>
@@ -55,7 +117,6 @@ export default function AtoDashboard() {
           <p style={{ color: "#64748b", margin: 0 }}>Performance tracking for the current revenue cycle.</p>
         </div>
 
-        {/* Action Button */}
         <div style={{ marginBottom: "25px" }}>
           <button style={styles.btnSuccess} onClick={() => router.push('/enter-tax-data')}>
             ➕ Enter New Tax Record
@@ -82,17 +143,68 @@ export default function AtoDashboard() {
         <div style={styles.filterBar}>
           <div style={{ flex: 1, minWidth: "150px" }}>
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569", display: "block", marginBottom: "5px" }}>Start Date</label>
-            <input type="date" style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1" }} />
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+            />
           </div>
           <div style={{ flex: 1, minWidth: "150px" }}>
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569", display: "block", marginBottom: "5px" }}>End Date</label>
-            <input type="date" style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1" }} />
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+            />
           </div>
-          <button style={styles.btnPrimary}>Download Report</button>
+          <button
+            onClick={() => { setAppliedFrom(from); setAppliedTo(to); }}
+            disabled={!from || !to}
+            style={{
+              ...styles.btnPrimary,
+              background: from && to ? "#2563eb" : "#e2e8f0",
+              color: from && to ? "white" : "#94a3b8",
+              cursor: from && to ? "pointer" : "not-allowed",
+            }}
+          >
+            Apply
+          </button>
+          {(appliedFrom || appliedTo) && (
+            <button
+              onClick={() => { setFrom(""); setTo(""); setAppliedFrom(""); setAppliedTo(""); }}
+              style={{
+                background: "#fef2f2",
+                color: "#991b1b",
+                border: "1px solid #fecaca",
+                padding: "10px 18px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "600",
+              }}
+            >
+              Clear
+            </button>
+          )}
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            style={{
+              ...styles.btnPrimary,
+              background: downloading ? "#94a3b8" : "#2563eb",
+              cursor: downloading ? "not-allowed" : "pointer",
+            }}
+          >
+            {downloading ? "Downloading..." : "📥 Download Report"}
+          </button>
         </div>
 
         {/* Table Section */}
-        <h3 style={{ fontSize: "18px", color: "#1e293b", marginBottom: "15px" }}>Recent Monthly Submissions</h3>
+        <h3 style={{ fontSize: "18px", color: "#1e293b", marginBottom: "15px" }}>
+          {appliedFrom && appliedTo ? "Filtered Submissions" : "Recent Monthly Submissions"}
+        </h3>
         <div style={{ overflowX: "auto" }}>
           <div style={styles.tableWrapper}>
             <table style={styles.table}>
@@ -111,36 +223,22 @@ export default function AtoDashboard() {
                   const interswitch = Number(rec.interswitch_amount || 0);
                   const gokollect = Number(rec.gokollect_amount || 0);
                   const total = remita + interswitch + gokollect;
-                  
-                  // Format date safely
-                  const formatDate = (dateStr: string | null | undefined) => {
-                    if (!dateStr) return "N/A";
-                    try {
-                      return new Date(dateStr).toLocaleDateString("en-NG", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric"
-                      });
-                    } catch (err) {
-                      return dateStr;
-                    }
-                  };
-                  
+
                   return (
-                  <tr key={i}>
-                    <td style={styles.td}>{formatDate(rec.date_of_remittance)}</td>
-                    <td style={styles.td}>₦{remita.toLocaleString()}</td>
-                    <td style={styles.td}>₦{interswitch.toLocaleString()}</td>
-                    <td style={styles.td}>₦{gokollect.toLocaleString()}</td>
-                    <td style={{ ...styles.td, fontWeight: "bold", color: "#0f172a" }}>
+                    <tr key={i}>
+                      <td style={styles.td}>{formatDate(rec.date_of_remittance)}</td>
+                      <td style={styles.td}>₦{remita.toLocaleString()}</td>
+                      <td style={styles.td}>₦{interswitch.toLocaleString()}</td>
+                      <td style={styles.td}>₦{gokollect.toLocaleString()}</td>
+                      <td style={{ ...styles.td, fontWeight: "bold", color: "#0f172a" }}>
                         ₦{total.toLocaleString()}
-                    </td>
-                  </tr>
-                );
+                      </td>
+                    </tr>
+                  );
                 }) : (
                   <tr>
                     <td colSpan={5} style={{ ...styles.td, textAlign: "center", padding: "40px", color: "#94a3b8" }}>
-                        No records found for the selected period.
+                      No records found for the selected period.
                     </td>
                   </tr>
                 )}
@@ -149,6 +247,6 @@ export default function AtoDashboard() {
           </div>
         </div>
       </div>
-    </DashboardLayout>  
+    </DashboardLayout>
   );
 }

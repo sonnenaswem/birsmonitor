@@ -313,7 +313,7 @@ export default function ATODetailPage() {
                     <th style={styles.th}>Reference</th>
                     <th style={styles.th}>Amount</th>
                     <th style={styles.th}>Source</th>
-                    <th style={styles.th}>Date & Time</th>
+                    <th style={styles.th}>Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -328,7 +328,15 @@ export default function ATODetailPage() {
                           <span style={{color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px"}}><MousePointer2 size={14}/> Manual</span>
                         }
                       </td>
-                      <td style={styles.td}>{p.date}</td>
+                      <td style={styles.td}>
+                        {p.date && p.date !== "N/A"
+                          ? new Date(p.date).toLocaleDateString("en-NG", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "N/A"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

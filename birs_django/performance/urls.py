@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import (
+    export_my_entries_csv,
     performance_summary,
     league_table,
     admin_dashboard,
@@ -35,6 +36,8 @@ urlpatterns = [
 
     # CSV export
     path("export-csv/", export_revenue_csv, name="export-revenue"),
+
+    path("export-my-entries/", export_my_entries_csv, name="export-my-entries"),
 ]
 
 urlpatterns += router.urls

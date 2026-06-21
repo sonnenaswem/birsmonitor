@@ -166,16 +166,6 @@ ATOS = [
         "password": "pass138"
     },
     {
-        "username": "ato_okpokwu",
-        "email": "atookpokwu_ghok@mailhost.com",
-        "first_name": "ATO",
-        "last_name": "OKPOKWU",
-        "gokollect_code": "GHOK",
-        "role": "ato",
-        "area_office": "ATO OKPOKWU",
-        "password": "pass139"
-    },
-    {
         "username": "ato_gboko",
         "email": "atogboko_ghbo@mailhost.com",
         "first_name": "ATO",
@@ -401,6 +391,7 @@ ATOS = [
         "email": "atookpoga@mailhost.com",
         "first_name": "ATO",
         "last_name": "OKPOGA",
+        "gokollect_code": "GHOK",
         "role": "ato",
         "area_office": "ATO OKPOGA",
         "password": "pass164"
