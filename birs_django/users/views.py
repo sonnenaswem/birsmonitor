@@ -268,11 +268,21 @@ class ATODetailView(APIView):
             "gokollect_total": float(totals['gokollect_total'] or 0),
             "recent_payments": [
                 {
-                    "taxpayer": p.taxpayer_name, 
-                    "reference": p.remita or p.interswitch_ref or p.gokollect,
-                    "amount": float((p.remita_amount or 0) + (p.interswitch_amount or 0) + (p.gokollect_amount or 0)), 
-                    "source": p.source, 
-                    "date": p.date_of_remittance.strftime('%Y-%m-%d %H:%M:%S')
+                    "taxpayer": p.taxpayer_name,
+                    "reference": (
+                        p.remita
+                        or p.interswitch_ref
+                        or p.gokollect
+                        or p.softnet_reference
+                        or "N/A"
+                    ),
+                    "amount": float((p.remita_amount or 0) + (p.interswitch_amount or 0) + (p.gokollect_amount or 0)),
+                    "source": p.source,
+                    "date": (
+                        p.date_of_remittance.strftime('%Y-%m-%d')
+                        if p.date_of_remittance
+                        else "N/A"
+                    )
                 } for p in recent_payments
             ]
         })

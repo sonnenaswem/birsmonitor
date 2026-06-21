@@ -660,7 +660,7 @@ export default function HomePage() {
         <div style={styles.footerInner}>
           <div style={styles.footerLogo}>
             <div style={styles.footerLogoIcon}><img src="/logo3.png" alt="BIRS" style={styles.logo} /></div>
-            <span style={styles.footerLogoText}>Powered by GashResearch</span>
+            <span style={styles.footerLogoText}>Powered by Gash Consult Ltd</span>
           </div>
           <p style={styles.footerCopy}> Copyright@
             {new Date().getFullYear()} Benue State Internal Revenue Service. All Rights Reserved
