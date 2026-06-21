@@ -148,27 +148,82 @@ export default function ViewAllEntries() {
 
   const displayedEntries = entries;
 
-  const exportExcel = () => {
-    const exportData = displayedEntries.map((e) => ({
-      Date: e.date_of_remittance,
-      Taxpayer: e.taxpayer_name,
-      Reference: e.display_reference,
-      Channel: e.payment_channel,
-      Amount: e.display_amount,
-      Station: e.station_name,
-      Source: e.source,
-    }));
+  const [exporting, setExporting] = useState(false);
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      let url = `/api/tax/entries/?page=1&page_size=2000`;
 
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Revenue Ledger"
-    );
+      if (appliedFrom && appliedTo) {
+        url += `&from_date=${appliedFrom}&to_date=${appliedTo}`;
+      }
+      if (searchTerm.trim()) {
+        url += `&search=${encodeURIComponent(searchTerm.trim())}`;
+      }
 
-    XLSX.writeFile(workbook, "RevenueLedger.xlsx");
+      // Fetch first page to know total count
+      const firstRes = await api.get(url);
+      const totalCount = firstRes.data.count;
+      let allResults = [...firstRes.data.results];
+
+      // If more than one page worth, fetch the rest in parallel
+      const pageSize = 2000;
+      const totalPagesNeeded = Math.ceil(totalCount / pageSize);
+
+      if (totalPagesNeeded > 1) {
+        const remainingPages = [];
+        for (let p = 2; p <= totalPagesNeeded; p++) {
+          let pUrl = `/api/tax/entries/?page=${p}&page_size=${pageSize}`;
+          if (appliedFrom && appliedTo) pUrl += `&from_date=${appliedFrom}&to_date=${appliedTo}`;
+          if (searchTerm.trim()) pUrl += `&search=${encodeURIComponent(searchTerm.trim())}`;
+          remainingPages.push(api.get(pUrl));
+        }
+        const remainingResults = await Promise.all(remainingPages);
+        remainingResults.forEach((r) => {
+          allResults = allResults.concat(r.data.results);
+        });
+      }
+
+      const normalized = allResults.map((entry: TaxEntry) => ({
+        Date: entry.date_of_remittance,
+        Taxpayer: entry.taxpayer_name,
+        Reference:
+          entry.display_reference ||
+          entry.remita ||
+          entry.interswitch_ref ||
+          entry.gokollect ||
+          "N/A",
+        Channel: entry.payment_channel,
+        Amount: Number(
+          entry.display_amount ??
+          entry.remita_amount ??
+          entry.interswitch_amount ??
+          entry.gokollect_amount ??
+          entry.total_amount ??
+          0
+        ),
+        Station:
+          entry.station_name ||
+          entry.user_full_name ||
+          entry.area_office ||
+          "Headquarters",
+        Source: entry.source,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(normalized);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Revenue Ledger");
+
+      const filenameSuffix =
+        appliedFrom && appliedTo ? `_${appliedFrom}_to_${appliedTo}` : "";
+      XLSX.writeFile(workbook, `RevenueLedger${filenameSuffix}.xlsx`);
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to export data. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const exportPDF = () => {
@@ -276,12 +331,24 @@ export default function ViewAllEntries() {
             />
           </div>
           {/* Export Buttons */}
-          <button onClick={exportExcel} style={{ padding: "10px 15px", borderRadius: "10px", border: "1px solid #cbd5e1", background: "white", display: "flex", alignItems: "center", gap: "8px", fontWeight: "600", cursor: "pointer", fontSize: "14px" }}>
-            <FileDown size={18} /> Export Excel
+          <button
+            onClick={exportExcel}
+            disabled={exporting}
+            style={{
+              padding: "10px 15px",
+              borderRadius: "10px",
+              border: "1px solid #cbd5e1",
+              background: exporting ? "#f1f5f9" : "white",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontWeight: "600",
+              cursor: exporting ? "not-allowed" : "pointer",
+              fontSize: "14px",
+            }}
+          >
+            <FileDown size={18} /> {exporting ? "Exporting..." : "Export Excel"}
           </button>
-          {/* <button onClick={exportPDF} style={{ padding: "10px 15px", borderRadius: "10px", border: "1px solid #cbd5e1", background: "white", display: "flex", alignItems: "center", gap: "8px", fontWeight: "600", cursor: "pointer", fontSize: "14px" }}>
-            <FileDown size={18} /> Export PDF
-          </button> */}
         </div>
       </div>
 
