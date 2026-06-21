@@ -559,7 +559,7 @@ export default function HomePage() {
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
-                <h4>49 ATOs</h4>
+                <h4>48 ATOs</h4>
                 <p>Active tax officers tracked</p>
               </div>
               <div className="mini-card">
@@ -682,9 +682,9 @@ export default function HomePage() {
             <div className="footer-brand">
               <div className="footer-logo">
                 <img
-                  src="/logo1.png"
+                  src="/logo6.png"
                   alt="BIRS Logo"
-                  style={{ height: "36px", width: "auto" }}
+                  style={{ height: "42px", width: "auto" }}
                   onError={(e) => {
                     const target = e.currentTarget;
                     target.style.display = "none";
@@ -695,11 +695,10 @@ export default function HomePage() {
                 <div className="footer-logo-mark" style={{ display: "none" }}>
                   B
                 </div>
-                <span className="footer-logo-text">BIRS Monitor</span>
+                <span className="footer-logo-text"> </span>
               </div>
               <p>
-                Powered by Gash Consult Ltd. The official revenue intelligence platform
-                for Benue State Internal Revenue Service.
+                Powered by Gash Consult Ltd and Designed to elevate revenue management for Benue State Internal Revenue Service. 
               </p>
             </div>
             <div className="footer-cols">
