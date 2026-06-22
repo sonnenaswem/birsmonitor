@@ -141,7 +141,7 @@ export default function LoginPage() {
           <img
             src="/logo1.png"
             alt="BIRS Logo"
-            style={{ height: 42, width: "auto" }}
+            style={{ height: 50, width: "auto" }}
             onError={(e) => {
               const target = e.currentTarget;
               target.style.display = "none";

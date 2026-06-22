@@ -77,37 +77,22 @@ def process_softnet_transaction(payload):
 
     if existing:
 
-        if not existing.date_of_remittance:
+        if (
+            existing.date_of_remittance is None
+            and payment_date is not None
+        ):
 
-            raw_date = (
-                payload.get("transactionDate")
-                or payload.get("createdDate")
-                or payload.get("createdAt")
+            existing.date_of_remittance = payment_date
+            existing.data = payload
+            existing.softnet_data = payload
+
+            existing.save(
+                update_fields=[
+                    "date_of_remittance",
+                    "data",
+                    "softnet_data",
+                ]
             )
-
-            if raw_date:
-
-                try:
-
-                    existing.date_of_remittance = (
-                        datetime.fromisoformat(
-                            raw_date.replace("Z", "+00:00")
-                        ).date()
-                    )
-
-                    existing.data = payload
-                    existing.softnet_data = payload
-
-                    existing.save(
-                        update_fields=[
-                            "date_of_remittance",
-                            "data",
-                            "softnet_data",
-                        ]
-                    )
-
-                except Exception:
-                    pass
 
         return existing
 
