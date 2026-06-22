@@ -54,6 +54,12 @@ def process_softnet_webhook_task(
     )
 
     try:
+        import json
+
+        logger.info(
+            "SOFTNET WEBHOOK PAYLOAD:\n%s",
+            json.dumps(payload, indent=2)
+        )
 
         process_softnet_transaction(payload)
 
