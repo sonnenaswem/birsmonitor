@@ -18,7 +18,13 @@ def process_softnet_transaction(payload):
         str(payload.get("amount") or 0)
     )
 
-    terminal_id = payload.get("terminalId")
+    terminal_id = (
+        payload.get("terminalId")
+        or payload.get("taxIdNumber")
+    )
+
+    if terminal_id:
+        terminal_id = terminal_id.strip().upper()
 
     ato_name = payload.get("ato")
 

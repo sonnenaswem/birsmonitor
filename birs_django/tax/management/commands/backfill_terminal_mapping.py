@@ -34,9 +34,15 @@ class Command(BaseCommand):
 
         for tx in qs.iterator():
 
+            data = tx.data or {}
+
             terminal = (
-                tx.data or {}
-            ).get("terminalId")
+                data.get("terminalId")
+                or data.get("taxIdNumber")
+            )
+
+            if terminal:
+                terminal = terminal.strip().upper()
 
             if not terminal:
                 continue
