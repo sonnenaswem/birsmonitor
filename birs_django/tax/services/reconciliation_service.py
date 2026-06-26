@@ -109,11 +109,19 @@ def process_softnet_transaction(payload):
 
         ato = terminal.ato
 
-    elif ato_name:
+    ATO_ALIASES = {
+        "ATO K-ALA": "ATO KATSINA ALA",
+        "ATO UGBOKPO": "ATO UGBOKOLO",
+    }
 
-        ato = CustomUser.objects.filter(
-            area_office__iexact=ato_name
-        ).first()
+    ato_name = ATO_ALIASES.get(
+        ato_name,
+        ato_name
+    )
+
+    ato = CustomUser.objects.filter(
+        area_office__iexact=ato_name
+    ).first()
 
     try:
 
