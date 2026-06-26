@@ -88,6 +88,13 @@ class Command(BaseCommand):
 
             area = areas[0]
 
+            ALIASES = {
+                "ATO K-ALA": "ATO KATSINA ALA",
+                "ATO UGBOKPO": "ATO UGBOKOLO",
+            }
+
+            area = ALIASES.get(area, area)
+
             ato = CustomUser.objects.filter(
                 area_office=area
             ).first()
