@@ -27,9 +27,21 @@ class Command(BaseCommand):
 
         for _, row in df.iterrows():
             terminal_id = str(row["Terminal ID"]).strip()
+            ATO_ALIASES = {
+                "ATO K-ALA": "ATO KATSINA ALA",
+                "ATO UGBOKPO": "ATO UGBOKOLO",
+            }
+
             ato_name = str(row["Suggested ATO"]).strip()
 
-            ato = CustomUser.objects.filter(area_office=ato_name).first()
+            ato_name = ATO_ALIASES.get(
+                ato_name,
+                ato_name,
+            )
+
+            ato = CustomUser.objects.filter(
+                area_office=ato_name
+            ).first()
 
             if not ato:
                 self.stdout.write(
