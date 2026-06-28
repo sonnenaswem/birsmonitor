@@ -29,10 +29,11 @@ class Command(BaseCommand):
             terminal_id = str(row["Terminal ID"]).strip()
             ATO_ALIASES = {
                 "ATO K-ALA": "ATO KATSINA ALA",
-                "ATO UGBOKPO": "ATO UGBOKOLO",
             }
 
-            ato_name = str(row["Suggested ATO"]).strip()
+            ato_name = str(
+                row.get("Suggested ATO", "")
+            ).strip().upper()
 
             ato_name = ATO_ALIASES.get(
                 ato_name,
@@ -40,7 +41,7 @@ class Command(BaseCommand):
             )
 
             ato = CustomUser.objects.filter(
-                area_office=ato_name
+                area_office__iexact=ato_name
             ).first()
 
             if not ato:
