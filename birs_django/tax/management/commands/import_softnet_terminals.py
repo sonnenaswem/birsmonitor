@@ -29,6 +29,8 @@ class Command(BaseCommand):
             terminal_id = str(row["Terminal ID"]).strip()
             ATO_ALIASES = {
                 "ATO K-ALA": "ATO KATSINA ALA",
+                "ATO NORTHBANK": "ATO NORTH BANK",
+                "ATO TSE KUCHA": "ATO TSE-KUCHA",
             }
 
             ato_name = str(

@@ -119,7 +119,8 @@ def process_softnet_transaction(payload):
         
         ATO_ALIASES = {
             "ATO K-ALA": "ATO KATSINA ALA",
-            "ATO UGBOKPO": "ATO UGBOKOLO",
+            "ATO NORTHBANK": "ATO NORTH BANK",
+            "ATO TSE KUCHA": "ATO TSE-KUCHA",
         }
 
         ato_name = ATO_ALIASES.get(
