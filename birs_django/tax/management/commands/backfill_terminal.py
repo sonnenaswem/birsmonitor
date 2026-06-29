@@ -27,6 +27,19 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
+        ALIASES = {
+            "2070WXBG": "2076DIG6",
+            "2070WXBJ": "2070WTUX",
+            "2070WXBK": "2070WTVA",
+            "2070WXBM": "2070WTUU",
+            "2070WXBQ": "2076DIF4",
+            "2070WXBR": "2076DIF5",
+            "2070WXBU": "2070WTUV",
+            "2070WXBS": "2070WTUY",
+            "2070WXBT": "2070WTUZ",
+            "2070WXBY": "2076DIG6",
+        }
+
         terminals = []
 
         if options["terminal"]:
@@ -60,9 +73,16 @@ class Command(BaseCommand):
 
         for terminal in terminals:
 
+            original_terminal = terminal
+
+            terminal = ALIASES.get(
+                terminal,
+                terminal
+            )
+            
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"\n========== {terminal} =========="
+                    f"\n========== {original_terminal} ({terminal}) =========="
                 )
             )
 
@@ -117,7 +137,7 @@ class Command(BaseCommand):
 
                 self.style.SUCCESS(
 
-                    f"{terminal}: "
+                    f"{original_terminal} ({terminal}): "
                     f"{terminal_total} processed"
 
                 )
