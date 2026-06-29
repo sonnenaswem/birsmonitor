@@ -9,6 +9,7 @@ class TaxEntrySerializer(serializers.ModelSerializer):
     display_amount = serializers.SerializerMethodField()
     station_name = serializers.SerializerMethodField()
     payment_channel = serializers.SerializerMethodField()
+    terminal_id = serializers.SerializerMethodField()
 
     class Meta:
         model = TaxEntry
@@ -18,7 +19,7 @@ class TaxEntrySerializer(serializers.ModelSerializer):
             'vehicle_type', 'registration_number', 'source', 
             'remita_verified', 'interswitch_verified', 'gokollect_verified', 
             'remita_amount', 'interswitch_amount', 'gokollect_amount',
-            'month', 'year', 'user_full_name', 'area_office', 'total_amount', 'display_reference', 'display_amount', 'station_name', 'payment_channel',
+            'month', 'year', 'user_full_name', 'area_office', 'total_amount', 'display_reference', 'display_amount', 'station_name', 'payment_channel', 'terminal_id',
             
         ]
         # FIXED: Use underscore, not hyphen
@@ -161,6 +162,10 @@ class TaxEntrySerializer(serializers.ModelSerializer):
     def get_payment_channel(self, obj):
         return self.get_channel(obj)
     
+    def get_terminal_id(self, obj):
+        if obj.pos_terminal:
+            return obj.pos_terminal.terminal_id
+        return ""
 
     def validate_remita(self, value):
         if value and not value.isdigit():

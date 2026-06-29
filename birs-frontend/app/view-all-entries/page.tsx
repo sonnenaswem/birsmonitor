@@ -38,6 +38,7 @@ interface TaxEntry {
   display_reference?: string;
   display_amount?: number;
   station_name?: string;
+  terminal_id?: string;
 }
 
 export default function ViewAllEntries() {
@@ -194,6 +195,7 @@ export default function ViewAllEntries() {
           entry.interswitch_ref ||
           entry.gokollect ||
           "N/A",
+        Terminal: entry.terminal_id || "",
         Channel: entry.payment_channel,
         Amount: Number(
           entry.display_amount ??
@@ -236,6 +238,7 @@ export default function ViewAllEntries() {
       e.date_of_remittance,
       e.taxpayer_name,
       e.display_reference,
+      e.terminal_id || "-",
       e.channel,
       `₦${Number(e.display_amount).toLocaleString(undefined, {
         minimumFractionDigits: 2,
@@ -246,7 +249,7 @@ export default function ViewAllEntries() {
 
     (doc as any).autoTable({
       startY: 24,
-      head: [["Date", "Taxpayer", "Reference", "Channel", "Amount", "Station", "Source"]],
+      head: [["Date", "Taxpayer", "Reference", "Terminal", "Channel", "Amount", "Station", "Source"]],
       body: tableData,
     });
 
@@ -423,6 +426,7 @@ export default function ViewAllEntries() {
                 <th style={styles.th}>DATE</th>
                 <th style={styles.th}>TAXPAYER / REVENUE ITEM</th>
                 <th style={styles.th}>REFERENCE</th>
+                <th style={styles.th}>TERMINAL ID</th>
                 <th style={{ ...styles.th, textAlign: "left" }}>CHANNEL</th>
                 <th style={styles.th}>AMOUNT</th>
                 <th style={styles.th}>ATO STATION</th>
@@ -432,9 +436,9 @@ export default function ViewAllEntries() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Fetching records...</td></tr>
+                <tr><td colSpan={9} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Fetching records...</td></tr>
               ) : displayedEntries.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
+                <tr><td colSpan={9} style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>No transactions found matching your search.</td></tr>
               ) : (
                 displayedEntries.map(entry => {
                   // Format date safely
@@ -469,6 +473,20 @@ export default function ViewAllEntries() {
                     <td style={styles.td}>
                       <code style={{ background: "#f1f5f9", padding: "4px 8px", borderRadius: "6px", fontSize: "13px" }}>
                         {entry.display_reference}
+                      </code>
+                    </td>
+
+                    <td style={styles.td}>
+                      <code
+                        style={{
+                          background: "#f8fafc",
+                          padding: "4px 8px",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          color: "#334155",
+                        }}
+                      >
+                        {entry.terminal_id || "-"}
                       </code>
                     </td>
 
