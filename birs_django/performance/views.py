@@ -543,13 +543,29 @@ def league_table(request):
         })
 
     ranked = sorted(
-        data,
-        key=lambda x: x["percent"],
-        reverse=True
+    data,
+    key=lambda x: x["percent"],
+    reverse=True
     )
 
-    cache.set(cache_key, ranked, timeout=60 * 5)
+    print("\n")
+    print("=" * 100)
+    print("LEAGUE TABLE DEBUG")
+    print("=" * 100)
 
+    for row in ranked:
+        print(
+            row["station_name"],
+            "| remita:", row["remita"],
+            "| interswitch:", row["interswitch"],
+            "| gokollect:", row["gokollect"],
+            "| total:", row["total"],
+        )
+
+    print("=" * 100)
+    print("\n")
+
+    cache.set(cache_key, ranked, timeout=60 * 5)
 
     return Response(ranked)
 
