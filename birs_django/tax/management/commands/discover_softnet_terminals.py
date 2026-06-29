@@ -42,7 +42,8 @@ class Command(BaseCommand):
             data = row["data"] or {}
 
             terminal = (
-                data.get("terminalId")
+                data.get("newTerminalId")
+                or data.get("terminalId")
                 or data.get("taxIdNumber")
             )
 

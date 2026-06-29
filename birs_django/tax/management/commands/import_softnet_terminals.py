@@ -26,7 +26,10 @@ class Command(BaseCommand):
         skipped = 0
 
         for _, row in df.iterrows():
-            terminal_id = str(row["Terminal ID"]).strip()
+            terminal_id = str(
+                row.get("newTerminalId") or row.get("Terminal ID")
+            ).strip()
+            
             ATO_ALIASES = {
                 "ATO K-ALA": "ATO KATSINA ALA",
                 "ATO NORTHBANK": "ATO NORTH BANK",
