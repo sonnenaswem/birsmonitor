@@ -17,8 +17,7 @@ from tax.models import TaxEntry
 from performance.models import PerformanceTarget
 from rest_framework import viewsets
 from django.contrib.auth.models import AbstractUser
-from tax.serializers import TaxEntrySerializer
-from datetime import datetime
+
 
 from .serializers import OfficerAccountSerializer
 
@@ -173,7 +172,7 @@ class ATODetailView(APIView):
         )
 
         # 3. Collection trend for the selected range or last 7 days
-        trend_entries = entries
+        trend_entries = TaxEntry.objects.filter(user=ato)
 
         if from_date and to_date:
             trend_entries = trend_entries.filter(date_of_remittance__date__range=[from_date, to_date])
@@ -205,25 +204,11 @@ class ATODetailView(APIView):
         all_atos = CustomUser.objects.filter(role='ato')
         rank_list = []
         for a in all_atos:
-
-            rank_entries = TaxEntry.objects.filter(user=a)
-
-            if from_date and to_date:
-                rank_entries = rank_entries.filter(
-                    date_of_remittance__range=[from_date, to_date]
-                )
-            else:
-                rank_entries = rank_entries.filter(
-                    date_of_remittance__year=now.year,
-                    date_of_remittance__month=now.month
-                )
-
-            total = (
-                rank_entries.aggregate(
-                    s=Sum(total_expr)
-                )["s"]
-                or 0
-            )
+            total = TaxEntry.objects.filter(
+                user=a,
+                date_of_remittance__year=now.year,
+                date_of_remittance__month=now.month
+            ).aggregate(s=Sum(total_expr))['s'] or 0
 
             rank_list.append((a.id, total))
 
@@ -235,18 +220,10 @@ class ATODetailView(APIView):
             rank = "N/A"
 
         # 6. Get Target Amount
-        if from_date:
-            selected = datetime.strptime(from_date, "%Y-%m-%d")
-            target_month = selected.month
-            target_year = selected.year
-        else:
-            target_month = now.month
-            target_year = now.year
-
         target = PerformanceTarget.objects.filter(
             user=ato,
-            month=target_month,
-            year=target_year
+            month=now.month,
+            year=now.year
         ).first()
 
         target_amount = float(target.target_amount) if target else 0.0
@@ -266,10 +243,7 @@ class ATODetailView(APIView):
             }
             for item in item_breakdown
         ]
-        recent_serialized = TaxEntrySerializer(
-            recent_payments,
-            many=True,
-        ).data
+
         return Response({
             "username": ato.username,
             "full_name": getattr(ato, 'full_name', ato.first_name),
@@ -292,7 +266,25 @@ class ATODetailView(APIView):
             "remita_total": float(totals['remita_total'] or 0),
             "interswitch_total": float(totals['interswitch_total'] or 0),
             "gokollect_total": float(totals['gokollect_total'] or 0),
-            "recent_payments": recent_serialized,
+            "recent_payments": [
+                {
+                    "taxpayer": p.taxpayer_name,
+                    "reference": (
+                        p.remita
+                        or p.interswitch_ref
+                        or p.gokollect
+                        or p.softnet_reference
+                        or "N/A"
+                    ),
+                    "amount": float((p.remita_amount or 0) + (p.interswitch_amount or 0) + (p.gokollect_amount or 0)),
+                    "source": p.source,
+                    "date": (
+                        p.date_of_remittance.strftime('%Y-%m-%d')
+                        if p.date_of_remittance
+                        else "N/A"
+                    )
+                } for p in recent_payments
+            ]
         })
 
 
