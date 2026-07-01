@@ -44,7 +44,7 @@ export default function AtoDashboard() {
       });
 
       const blob = new Blob([response.data], {
-        type: response.headers["content-type"] || "text/csv",
+        type: String(response.headers["content-type"] || "text/csv"),
       });
 
       const contentDisposition = response.headers["content-disposition"] || "";

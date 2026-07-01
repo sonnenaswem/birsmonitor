@@ -290,41 +290,6 @@ export default function AdminDashboard() {
     return colors.danger;
   };
 
-  const handleDownload = async (type: "excel" | "pdf") => {
-    setActiveDownload(type);
-
-    if (type !== "excel") {
-      setTimeout(() => setActiveDownload(null), 2000);
-      return;
-    }
-
-    try {
-      const response = await api.get("/api/performance/export-csv/", {
-        responseType: "blob",
-        params: appliedFrom && appliedTo ? { from_date: appliedFrom, to_date: appliedTo } : {},
-      });
-
-      const blob = new Blob([response.data], {
-        type: response.headers["content-type"] || "text/csv",
-      });
-
-      const contentDisposition = response.headers["content-disposition"] || "";
-      const filenameMatch = contentDisposition.match(/filename="?(.*)"?/);
-      const filename = filenameMatch?.[1] || `revenue_report_${new Date().toISOString().slice(0, 10)}.csv`;
-
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-    } finally {
-      setTimeout(() => setActiveDownload(null), 2000);
-    }
-  };
 
   const handleRefresh = () => {
     setLoading(true);
