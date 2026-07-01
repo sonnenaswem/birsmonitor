@@ -571,365 +571,678 @@ def league_table(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsOversightRole]) # Allow authenticated users
+@permission_classes([IsOversightRole])
 def admin_dashboard(request):
-    now = timezone.now()
-    month = now.month
-    year = now.year
+    """
+    Admin dashboard revenue summary.
 
-    # Check if today is the first day of the month - if so, reset charts to zero
-    is_first_day_of_month = now.day == 1
+    Default behaviour:
+    - Shows the real current calendar month.
+    - Does not reset revenue to zero on the first day of a month.
+
+    Filter behaviour:
+    - When from_date and to_date are supplied, revenue and targets
+      are calculated for the selected period.
+    """
+
+    now = timezone.now()
+    current_month = now.month
+    current_year = now.year
 
     try:
         from_date = request.GET.get("from_date")
         to_date = request.GET.get("to_date")
 
-        # Use TaxEntry instead of Payment for calculations
+        # All ATO users must be available in every execution path.
+        atos = CustomUser.objects.filter(role="ato")
+
+        # Reject incomplete date filters.
+        if bool(from_date) != bool(to_date):
+            return Response(
+                {
+                    "error": (
+                        "Both from_date and to_date are required "
+                        "when filtering by date."
+                    )
+                },
+                status=400
+            )
+
         entries = TaxEntry.objects.all()
 
+        # ---------------------------------------------------------
+        # 1. SELECT REVENUE PERIOD AND TARGET PERIOD
+        # ---------------------------------------------------------
         if from_date and to_date:
-            entries = entries.filter(
-                date_of_remittance__range=[from_date, to_date]
-            )
-        else:
-            # Default to current month/year
-            entries = entries.filter(
-                date_of_remittance__month=month,
-                date_of_remittance__year=year
-            )
+            start_date = datetime.strptime(
+                from_date,
+                "%Y-%m-%d"
+            ).date()
 
-        # If it's the first day of the month, show zero data for current month
-        if is_first_day_of_month and not (from_date and to_date):
-            # Return zero values for all current month calculations
-            grand_total = 0
-            remita_total = 0
-            interswitch_total = 0
-            gokollect_total = 0
-            total_target = 0
-            ato_stats = []
-            ranked = []
-            tax_item_totals = []
-            pos_total = 0
-            manual_total = 0
-            chart_data = []
-        else:
-            # Calculate totals from TaxEntry
-            remita_total = entries.aggregate(
-                total=Sum('remita_amount')
-            )['total'] or 0
+            end_date = datetime.strptime(
+                to_date,
+                "%Y-%m-%d"
+            ).date()
 
-            interswitch_total = entries.aggregate(
-                total=Sum('interswitch_amount')
-            )['total'] or 0
-
-            gokollect_total = entries.aggregate(
-                total=Sum('gokollect_amount')
-            )['total'] or 0
-
-            grand_total = float(remita_total) + float(interswitch_total) + float(gokollect_total)
-
-            # Get all ATOs
-            atos = CustomUser.objects.filter(role="ato")
-
-            target_queryset = PerformanceTarget.objects.all()
-
-            if from_date and to_date:
-                f_dt = datetime.strptime(from_date, "%Y-%m-%d")
-                t_dt = datetime.strptime(to_date, "%Y-%m-%d")
-
-                target_queryset = target_queryset.filter(
-                    Q(year__gt=f_dt.year, year__lt=t_dt.year) |
-                    Q(year=f_dt.year, month__gte=f_dt.month) |
-                    Q(year=t_dt.year, month__lte=t_dt.month)
-                )
-            else:
-                target_queryset = target_queryset.filter(
-                    month=month,
-                    year=year
-                )
-
-            total_target = float(
-                target_queryset.aggregate(
-                    total=Coalesce(
-                        Sum("target_amount"),
-                        Value(0, output_field=DecimalField()),
-                        output_field=DecimalField()
-                    )
-                )["total"]
-            )
-            ato_revenue = (
-                entries.values("user")
-                .annotate(
-                    remita_total=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    interswitch_total=Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    gokollect_total=Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    days_active=Count("date_of_remittance", distinct=True),
-                )
-            )
-
-            target_queryset = PerformanceTarget.objects.all()
-
-            if from_date and to_date:
-                f_dt = datetime.strptime(from_date, "%Y-%m-%d")
-                t_dt = datetime.strptime(to_date, "%Y-%m-%d")
-
-                target_rows = (
-                    target_queryset.filter(
-                        Q(year__gt=f_dt.year, year__lt=t_dt.year) |
-                        Q(year=f_dt.year, month__gte=f_dt.month) |
-                        Q(year=t_dt.year, month__lte=t_dt.month)
-                    )
-                    .values("user")
-                    .annotate(
-                        total_target=Coalesce(
-                            Sum("target_amount"),
-                            Value(0, output_field=DecimalField()),
-                            output_field=DecimalField()
+            if start_date > end_date:
+                return Response(
+                    {
+                        "error": (
+                            "from_date cannot be later than to_date."
                         )
-                    )
+                    },
+                    status=400
                 )
 
-                target_map = {
-                    row["user"]: float(row["total_target"])
-                    for row in target_rows
-                }
+            entries = entries.filter(
+                date_of_remittance__range=[
+                    start_date,
+                    end_date
+                ]
+            )
 
-            else:
-                target_map = {
-                    t.user_id: float(t.target_amount)
-                    for t in PerformanceTarget.objects.filter(
-                        month=month,
-                        year=year
+            # Select only target months touched by the date range.
+            target_period_filter = Q()
+
+            target_year = start_date.year
+            target_month = start_date.month
+
+            while (
+                target_year < end_date.year
+                or (
+                    target_year == end_date.year
+                    and target_month <= end_date.month
+                )
+            ):
+                target_period_filter |= Q(
+                    year=target_year,
+                    month=target_month
+                )
+
+                if target_month == 12:
+                    target_month = 1
+                    target_year += 1
+                else:
+                    target_month += 1
+
+            target_queryset = PerformanceTarget.objects.filter(
+                target_period_filter
+            )
+
+        else:
+            # Default: real current-month data, including the first day.
+            entries = entries.filter(
+                date_of_remittance__year=current_year,
+                date_of_remittance__month=current_month
+            )
+
+            target_queryset = PerformanceTarget.objects.filter(
+                year=current_year,
+                month=current_month
+            )
+
+        # ---------------------------------------------------------
+        # 2. DASHBOARD REVENUE TOTALS
+        # ---------------------------------------------------------
+        totals = entries.aggregate(
+            remita_total=Coalesce(
+                Sum("remita_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+            interswitch_total=Coalesce(
+                Sum("interswitch_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+            gokollect_total=Coalesce(
+                Sum("gokollect_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+        )
+
+        remita_total = float(
+            totals["remita_total"] or 0
+        )
+        interswitch_total = float(
+            totals["interswitch_total"] or 0
+        )
+        gokollect_total = float(
+            totals["gokollect_total"] or 0
+        )
+
+        grand_total = (
+            remita_total
+            + interswitch_total
+            + gokollect_total
+        )
+
+        # ---------------------------------------------------------
+        # 3. TARGET TOTALS AND TARGET MAP
+        # ---------------------------------------------------------
+        total_target_result = target_queryset.aggregate(
+            total=Coalesce(
+                Sum("target_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            )
+        )
+
+        total_target = float(
+            total_target_result["total"] or 0
+        )
+
+        target_rows = (
+            target_queryset
+            .values("user")
+            .annotate(
+                target_total=Coalesce(
+                    Sum("target_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                )
+            )
+        )
+
+        target_map = {
+            row["user"]: float(
+                row["target_total"] or 0
+            )
+            for row in target_rows
+        }
+
+        # ---------------------------------------------------------
+        # 4. REVENUE PER ATO
+        # ---------------------------------------------------------
+        ato_revenue_rows = (
+            entries
+            .values("user")
+            .annotate(
+                remita_total=Coalesce(
+                    Sum("remita_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                interswitch_total=Coalesce(
+                    Sum("interswitch_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                gokollect_total=Coalesce(
+                    Sum("gokollect_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                days_active=Count(
+                    "date_of_remittance",
+                    distinct=True
+                ),
+            )
+        )
+
+        revenue_map = {
+            row["user"]: row
+            for row in ato_revenue_rows
+        }
+
+        ato_stats = []
+
+        for ato in atos:
+            revenue = revenue_map.get(
+                ato.id,
+                {}
+            )
+
+            ato_remita = float(
+                revenue.get("remita_total") or 0
+            )
+            ato_interswitch = float(
+                revenue.get("interswitch_total") or 0
+            )
+            ato_gokollect = float(
+                revenue.get("gokollect_total") or 0
+            )
+
+            ato_total = (
+                ato_remita
+                + ato_interswitch
+                + ato_gokollect
+            )
+
+            target_amount = target_map.get(
+                ato.id,
+                0.0
+            )
+
+            percent = (
+                round(
+                    ato_total
+                    / target_amount
+                    * 100,
+                    1
+                )
+                if target_amount > 0
+                else 0.0
+            )
+
+            days_active = revenue.get(
+                "days_active",
+                0
+            )
+
+            try:
+                score = calculate_performance_score(
+                    ato_total,
+                    target_amount,
+                    days_active
+                )
+            except Exception:
+                score = 0
+
+            ato_stats.append({
+                "id": ato.id,
+                "name": (
+                    getattr(
+                        ato,
+                        "full_name",
+                        None
                     )
-                }
+                    or ato.username
+                ),
+                "username": ato.username,
+                "station_name": (
+                    getattr(
+                        ato,
+                        "area_office",
+                        None
+                    )
+                    or ato.username
+                ),
+                "target": target_amount,
+                "remita": ato_remita,
+                "interswitch": ato_interswitch,
+                "gokollect": ato_gokollect,
+                "total": ato_total,
+                "percent": percent,
+                "score": score,
+                "flags": [],
+            })
 
-            revenue_map = {
-                item["user"]: item
-                for item in ato_revenue
+        ranked = sorted(
+            ato_stats,
+            key=lambda row: (
+                row["percent"],
+                row["score"],
+                row["total"]
+            ),
+            reverse=True
+        )
+
+        # ---------------------------------------------------------
+        # 5. TAX ITEM BREAKDOWN
+        # ---------------------------------------------------------
+        tax_item_aggregates = (
+            entries
+            .values("tax_item")
+            .annotate(
+                remita=Coalesce(
+                    Sum("remita_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                interswitch=Coalesce(
+                    Sum("interswitch_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                gokollect=Coalesce(
+                    Sum("gokollect_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+            )
+            .order_by("tax_item")
+        )
+
+        tax_item_totals = []
+
+        for item in tax_item_aggregates:
+            item_total = float(
+                (item["remita"] or 0)
+                + (item["interswitch"] or 0)
+                + (item["gokollect"] or 0)
+            )
+
+            tax_item_totals.append({
+                "item_name": (
+                    item["tax_item"]
+                    or "Unknown"
+                ),
+                "total_revenue": item_total,
+            })
+
+        tax_item_totals.sort(
+            key=lambda row: row["total_revenue"],
+            reverse=True
+        )
+
+        # ---------------------------------------------------------
+        # 6. CURRENT SELECTION CHANNEL CHART
+        # ---------------------------------------------------------
+        chart_rows = (
+            entries
+            .filter(
+                date_of_remittance__isnull=False
+            )
+            .annotate(
+                trunc_month=TruncMonth(
+                    "date_of_remittance"
+                )
+            )
+            .values("trunc_month")
+            .annotate(
+                remita=Coalesce(
+                    Sum("remita_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                interswitch=Coalesce(
+                    Sum("interswitch_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                gokollect=Coalesce(
+                    Sum("gokollect_amount"),
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+            )
+            .order_by("trunc_month")
+        )
+
+        chart_data = [
+            {
+                "month": (
+                    row["trunc_month"].strftime(
+                        "%b"
+                    )
+                    if row["trunc_month"]
+                    else "N/A"
+                ),
+                "remita": float(
+                    row["remita"] or 0
+                ),
+                "interswitch": float(
+                    row["interswitch"] or 0
+                ),
+                "gokollect": float(
+                    row["gokollect"] or 0
+                ),
             }
+            for row in chart_rows
+        ]
 
-            ato_stats = []
-
-            for ato in atos:
-                revenue = revenue_map.get(ato.id, {})
-
-                total = (
-                    float(revenue.get("remita_total", 0)) +
-                    float(revenue.get("interswitch_total", 0)) +
-                    float(revenue.get("gokollect_total", 0))
-                )
-
-                target_amount = target_map.get(ato.id, 0.0)
-
-                percent = round(
-                    (total / target_amount * 100), 1
-                ) if target_amount > 0 else 0
-
-                days_active = revenue.get("days_active", 0)
-
-                try:
-                    score = calculate_performance_score(
-                        total,
-                        target_amount,
-                        days_active
-                    )
-                    flags = []
-                except:
-                    score, flags = 0, []
-
-                ato_stats.append({
-                    "id": ato.id,
-                    "name": getattr(ato, "full_name", ato.username),
-                    "username": ato.username,   # add this
-                    "station_name": getattr(ato, "station", None)
-                        or getattr(ato, "station_name", None)
-                        or ato.username,  # add this (best for consistency)
-                    "target": target_amount,
-                    "total": total,
-                    "percent": percent,
-                    "score": score,
-                    "flags": flags,
-                })
-
-            ranked = sorted(ato_stats, key=lambda x: (x["percent"], x["score"], x["total"]), reverse=True)
-
-            # Calculate tax item aggregates
-            tax_item_aggregates = (
-                entries.values("tax_item")
-                .annotate(
-                    total_revenue=
-                    Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-                    Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-                    Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField())
-                )
-                .order_by("-total_revenue")
-            )
-
-            # 2. Format it for the frontend
-            tax_item_totals = [
-                {
-                    "item_name": item["tax_item"],
-                    "total_revenue": float(item["total_revenue"] or 0)
-                }
-                for item in tax_item_aggregates
-            ]
-
-            chart_data = (
-                entries
-
-                
-
-                .filter(date_of_remittance__isnull=False)
-
-                .annotate(trunc_month=TruncMonth("date_of_remittance"))
-                .values("trunc_month")
-                .annotate(
-                    remita=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    interswitch=Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    gokollect=Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                )
-                .order_by("trunc_month")
-            )
-
-        # Monthly trend from TaxEntry - only use current-year data by default
+        # ---------------------------------------------------------
+        # 7. MONTHLY TREND
+        # ---------------------------------------------------------
         if from_date and to_date:
             trend_entries = TaxEntry.objects.filter(
-                date_of_remittance__range=[from_date, to_date]
+                date_of_remittance__range=[
+                    start_date,
+                    end_date
+                ]
             )
         else:
             trend_entries = TaxEntry.objects.filter(
-                date_of_remittance__year=year,
-                date_of_remittance__month__lte=month
+                date_of_remittance__year=current_year,
+                date_of_remittance__month__lte=current_month
             )
 
-        monthly_trend = (
+        monthly_trend_rows = (
             trend_entries
-            .filter(date_of_remittance__isnull=False)
-            .annotate(trunc_month=TruncMonth("date_of_remittance"))
+            .filter(
+                date_of_remittance__isnull=False
+            )
+            .annotate(
+                trunc_month=TruncMonth(
+                    "date_of_remittance"
+                )
+            )
             .values("trunc_month")
             .annotate(
-                total=
-                Coalesce(
+                remita=Coalesce(
                     Sum("remita_amount"),
-                    Value(0, output_field=DecimalField())
-                ) +
-                Coalesce(
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                interswitch=Coalesce(
                     Sum("interswitch_amount"),
-                    Value(0, output_field=DecimalField())
-                ) +
-                Coalesce(
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
+                gokollect=Coalesce(
                     Sum("gokollect_amount"),
-                    Value(0, output_field=DecimalField())
-                )
+                    Value(
+                        0,
+                        output_field=DecimalField()
+                    ),
+                    output_field=DecimalField()
+                ),
             )
             .order_by("trunc_month")
         )
-        chart_data = (
-            entries
-            
 
-            .filter(date_of_remittance__isnull=False)
+        monthly_trend = [
+            {
+                "month": (
+                    row["trunc_month"].strftime(
+                        "%b %Y"
+                    )
+                    if row["trunc_month"]
+                    else "N/A"
+                ),
+                "total": float(
+                    (row["remita"] or 0)
+                    + (row["interswitch"] or 0)
+                    + (row["gokollect"] or 0)
+                ),
+            }
+            for row in monthly_trend_rows
+        ]
 
-            .annotate(trunc_month=TruncMonth("date_of_remittance"))
-            .values("trunc_month")
-            .annotate(
-                remita=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                interswitch=Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                gokollect=Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-            )
-            .order_by("trunc_month")
+        # ---------------------------------------------------------
+        # 8. POS AND MANUAL BREAKDOWN
+        # ---------------------------------------------------------
+        pos_result = entries.filter(
+            source="POS"
+        ).aggregate(
+            remita=Coalesce(
+                Sum("remita_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+            interswitch=Coalesce(
+                Sum("interswitch_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+            gokollect=Coalesce(
+                Sum("gokollect_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
         )
-        pos_total = entries.filter(source="POS").aggregate(
-            total=
-            Coalesce(Sum('remita_amount'), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-            Coalesce(Sum('interswitch_amount'), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-            Coalesce(Sum('gokollect_amount'), Value(0, output_field=DecimalField()), output_field=DecimalField())
-        )['total']
 
-        manual_total = entries.filter(source="Manual").aggregate(
-            total=
-            Coalesce(Sum('remita_amount'), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-            Coalesce(Sum('interswitch_amount'), Value(0, output_field=DecimalField()), output_field=DecimalField()) +
-            Coalesce(Sum('gokollect_amount'), Value(0, output_field=DecimalField()), output_field=DecimalField())
-        )['total']
+        manual_result = entries.filter(
+            source="Manual"
+        ).aggregate(
+            remita=Coalesce(
+                Sum("remita_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+            interswitch=Coalesce(
+                Sum("interswitch_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+            gokollect=Coalesce(
+                Sum("gokollect_amount"),
+                Value(
+                    0,
+                    output_field=DecimalField()
+                ),
+                output_field=DecimalField()
+            ),
+        )
 
+        pos_total = float(
+            (pos_result["remita"] or 0)
+            + (pos_result["interswitch"] or 0)
+            + (pos_result["gokollect"] or 0)
+        )
 
-        # If it's the first day of the month and no custom date filter, set chart_data to empty
-        if is_first_day_of_month and not (from_date and to_date):
-            chart_data = []
-        else:
-            chart_data = (
-                entries
-
-               
-
-                .filter(date_of_remittance__isnull=False)
-
-                .annotate(trunc_month=TruncMonth("date_of_remittance"))
-                .values("trunc_month")
-                .annotate(
-                    remita=Coalesce(Sum("remita_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    interswitch=Coalesce(Sum("interswitch_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                    gokollect=Coalesce(Sum("gokollect_amount"), Value(0, output_field=DecimalField()), output_field=DecimalField()),
-                )
-                .order_by("trunc_month")
-            )
+        manual_total = float(
+            (manual_result["remita"] or 0)
+            + (manual_result["interswitch"] or 0)
+            + (manual_result["gokollect"] or 0)
+        )
 
         return Response({
             "kpis": {
                 "total_revenue": grand_total,
                 "total_target": total_target,
-                "overall_percent": round((grand_total / total_target * 100), 1) if total_target else 0,
+                "overall_percent": (
+                    round(
+                        grand_total
+                        / total_target
+                        * 100,
+                        1
+                    )
+                    if total_target > 0
+                    else 0.0
+                ),
                 "total_atos": atos.count(),
-                "remita_total": float(remita_total),
-                "interswitch_total": float(interswitch_total),
-                "gokollect_total": float(gokollect_total),
+                "remita_total": remita_total,
+                "interswitch_total": interswitch_total,
+                "gokollect_total": gokollect_total,
                 "grand_total": grand_total,
             },
             "all_officers": ranked,
             "top5": ranked[:5],
             "bottom5": sorted(
                 ranked,
-                key=lambda x: x["percent"]
+                key=lambda row: (
+                    row["percent"],
+                    row["total"]
+                )
             )[:5],
-            "risky": [a for a in ranked if len(a["flags"]) > 0],
-            "monthly_trend": [
-                {
-                    "month": m["trunc_month"].strftime("%b %Y") if m.get("trunc_month") else "N/A",
-                    "total": float(m["total"] or 0)
-                }
-                for m in monthly_trend
+            "risky": [
+                row
+                for row in ranked
+                if row["flags"]
             ],
-            "chart_data": [
-                {
-                    "month": m["trunc_month"].strftime("%b"),
-                    "remita": float(m["remita"]),
-                    "interswitch": float(m["interswitch"]),
-                    "gokollect": float(m["gokollect"]),
-                }
-                for m in chart_data
-            ],
-            
+            "monthly_trend": monthly_trend,
+            "chart_data": chart_data,
             "tax_item_totals": tax_item_totals,
-            
-
             "source_breakdown": {
-                "pos": float(pos_total),
-                "manual": float(manual_total),
+                "pos": pos_total,
+                "manual": manual_total,
             },
-
         })
-        
 
-    except Exception as e:
-        # 🔥 THIS WILL NOW PRINT TO YOUR TERMINAL
+    except ValueError as exc:
+        return Response(
+            {
+                "error": (
+                    "Invalid date. Dates must use "
+                    "YYYY-MM-DD format."
+                ),
+                "details": str(exc),
+            },
+            status=400
+        )
+
+    except Exception as exc:
         import traceback
-        print("\n" + "!"*60)
+
+        print("\n" + "!" * 60)
         print("ADMIN DASHBOARD ERROR TRACEBACK:")
         print(traceback.format_exc())
-        print("!"*60 + "\n")
-        return Response({"error": "Server Error", "details": str(e)}, status=500)
-    
+        print("!" * 60 + "\n")
+
+        return Response(
+            {
+                "error": "Server Error",
+                "details": str(exc),
+            },
+            status=500
+        )
+
 
 def export_revenue_csv(request):
     # 1. Create the HttpResponse object with the appropriate CSV header.
